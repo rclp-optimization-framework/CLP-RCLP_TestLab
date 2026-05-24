@@ -1,5 +1,76 @@
 # CLP-RCLP Version History
 
+## v2.1.0 - Path Refactoring and Java Compatibility (May 2026)
+
+**Release Date**: May 14, 2026
+
+### Major Features
+- **Java-Compatible Conversion Mode**: New converter mode emitting integer energy units and seconds-based timing for semantic parity with JITS2022 baseline
+- **Complete Path Reorganization**: Modern project structure (core/, experiments/, scripts/) replacing legacy (Models/, Data/, Tests/)
+- **Data-Driven Model Bounds**: MiniZinc models now compute bounds from instance data, supporting arbitrary problem scales
+- **Automated Model Selection**: Runner auto-detects DZN precision and selects appropriate model variant
+- **Enhanced Documentation**: Professional CONFIG.md installation guide, comprehensive SUMMARY.md, updated version references
+
+### Breaking Changes
+- `original` (decimal) conversion mode removed; use `normalized` or `java`
+- Tests directory (`Tests/`) deprecated; results now in `experiments/results/`
+- Hardcoded model bounds replaced with data-dependent computation
+
+### Major Fixes
+- **RCLP Temporal Recursion**: Fixed sign bug in `rclp_model_float.mzn` (subtraction → addition)
+- **Runner Output Organization**: Results moved from `Tests/Output/` to `experiments/results/runner/Run_N/Output/`
+- **Model Precision Handling**: Auto-detect and select correct MiniZinc model based on DZN format
+
+### New/Updated Files
+- `requirements.txt` - Python dependencies for reproducible installation
+- `CONFIG.md` - Professional step-by-step installation guide
+- `SUMMARY.md` - Comprehensive v2.1.0 release summary
+- `scripts/runner/README.md` - CPLEX runner documentation
+- `scripts/debug/README.md` - Investigation utilities catalog
+
+### Path Migration Map
+| Legacy | Modern |
+|--------|--------|
+| Models/ | core/models/ |
+| Converter/ | core/converter/ |
+| Generator/ | core/generator/ |
+| Runner/ | core/runner/ |
+| Data/ | experiments/instances/ |
+| Tests/ | experiments/results/ |
+| Scripts/ | scripts/ |
+
+### Technical Improvements
+- Project root detection via `Path(__file__).resolve().parents[2]`
+- Flexible timeout handling in executor (None or ≤0 for infinite)
+- DZN precision detection in runner
+- Wildcard instance globbing in batch runner
+- CPLEX runner with warm-start artifact generation
+
+### Scripts Updated/Created
+- **Updated**: 50+ Python scripts, 8 shell scripts
+- **Created**: scripts/runner/run_with_cplex.py, scripts/debug/* utilities
+- **Validated**: All paths, imports, and execution behavior
+
+### Documentation
+- Updated: README.md, CHANGELOG.md, version badges
+- Created: CONFIG.md, requirements.txt
+- Created: SUMMARY.md (comprehensive release summary)
+- Updated: All version references (2.0.0 → 2.1.0)
+- Updated: Path examples in all README.md files
+
+### Known Limitations
+- RCLP robust variant returns UNKNOWN on tested instances (needs robustness tuning)
+- Commercial solvers require separate installation and licensing
+- Instance generation limited to predefined patterns
+
+### Commits
+- **refactor**: Complete path reorganization across 50+ files
+- **feat**: Java conversion mode, auto model selection, flexible timeout
+- **fix**: RCLP sign bug, runner output paths, model bounds
+- **docs**: Installation guide, version consolidation, migration guide
+
+---
+
 ## v2.0.0 - Multi-Tool Framework (April 2026)
 
 **Release Date**: April 20, 2026

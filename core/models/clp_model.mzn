@@ -22,8 +22,8 @@ array[B,1..max_stops] of int: st_bi;
 % Energy (D, Cmax, Cmin, alpha): Valores enteros en unidades de 0.001 kWh (SCALE=1000)
 %   Ejemplo: 100 kWh = 100000 unidades, 0.067 kWh × 1000 = 67 unidades (0% error)
 %   Escalado aumentado de 50 a 1000 para minimizar error de truncamiento en cálculos acumulados
-% Time (T, tau_bi, tbi, ctbi): Valores enteros en minutos (sin escala, SCALE_TIME=1)
-%   Ejemplo: 420 minutos (07:00) = 420 unidades, 5 min = 5 unidades
+% Time (T, tau_bi, tbi, ctbi): Valores enteros en segundos (sin escala)
+%   Ejemplo: 25200 segundos (07:00) = 25200 unidades, 60 s = 60 unidades
 
 % -----------------------------
 % CONSTANTES DEL MODELO
@@ -34,11 +34,11 @@ array[B,1..max_stops] of int: st_bi;
 int: Cmax;   % Capacidad máxima de la batería (en unidades de 0.001 kWh, SCALE=1000)
 int: Cmin;   % Nivel mínimo permitido de batería (en unidades de 0.001 kWh, SCALE=1000)
 int: alpha;  % Tasa de carga energética (en unidades de 0.001 kWh/min, SCALE=1000)
-int: mu;     % Desviación máxima permitida respecto al horario (en minutos)
-int: SM;     % Margen de seguridad entre eventos de carga (en minutos)
-int: psi;    % Tiempo mínimo de carga (en minutos)
-int: beta;   % Tiempo máximo de carga (en minutos)
-int: M;      % Constante grande para restricciones lógicas (Big-M ~5000, en minutos - no escala con energía)
+int: mu;     % Desviación máxima permitida respecto al horario (en segundos)
+int: SM;     % Margen de seguridad entre eventos de carga (en segundos)
+int: psi;    % Tiempo mínimo de carga (en segundos)
+int: beta;   % Tiempo máximo de carga (en segundos)
+int: M;      % Constante grande para restricciones lógicas (Big-M, en segundos)
 
 % -----------------------------
 % DATOS DE LAS RUTAS
@@ -65,6 +65,9 @@ array[B,1..max_stops] of var 0..1: xbi;      % 1 si el bus carga en la parada
 
 array[ST] of var 0..1: xst;                  % 1 si se instala estación
 
+% Optional warm start hooks. The runner may materialize a temporary model with
+% concrete values for these arrays when a warm-start JSON is provided. In the
+% base model they default to zero so the model remains universally usable.
 % Variables auxiliares para evitar solapamientos de carga
 array[B,B,1..max_stops,1..max_stops] of var 0..1: Zbdij;
 array[B,B,1..max_stops,1..max_stops] of var 0..1: zbdi;
@@ -83,7 +86,7 @@ constraint forall(b in B) (
 constraint forall(b in B, i in 1..num_stops[b]) (
     cbi[b,i] >= Cmin /\                     % nivel mínimo
     cbi[b,i] + ebi[b,i] <= Cmax /\          % no exceder capacidad
-    alpha * ctbi[b,i] >= ebi[b,i]           % relación tiempo-carga
+    alpha * ctbi[b,i] >= ebi[b,i]
 );
 
 % Evolución del nivel de batería entre paradas
@@ -174,8 +177,15 @@ constraint forall(b in B, i in num_stops[b]+1..max_stops) (
 % H. FUNCIÓN OBJETIVO
 % -----------------------------
 
-% Minimizar el número de estaciones instaladas
-solve minimize sum(st in ST)(xst[st]);
+% Lexicographic tie-breaker, still fully integer:
+% 1) minimize number of installed stations
+% 2) among ties, prefer the smallest indexed station set
+
+% Weak bias: prefer stations marked in xst_pref among tied optimal solutions.
+% Primary objective: minimize number of stations (dominant via TIE_BREAK_WEIGHT)
+% Secondary bias: minimize sum of (1 - xst_pref[st]) * xst[st]
+solve :: int_search([xbi[b,i] | b in B, i in 1..max_stops], input_order, indomain_min, complete)
+    minimize sum(st in ST)(xst[st]);
 
 % -----------------------------
 % SALIDA DE RESULTADOS

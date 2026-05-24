@@ -336,8 +336,8 @@ def main():
             sys.exit(1)
     else:
         # Directory mode - validate Battery Project Integer
-        project_root = Path(__file__).parent.parent
-        target_dir = project_root / "Data" / "Battery Project Integer"
+        project_root = Path(__file__).resolve().parents[2]
+        target_dir = project_root / "experiments" / "instances" / "battery-own"
 
         if not target_dir.exists():
             logger.error(f"Directory not found: {target_dir}")

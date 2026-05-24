@@ -62,7 +62,7 @@ class TransitionVerifier:
     @staticmethod
     def _find_project_root() -> Path:
         """Auto-detect project root directory."""
-        current = Path(__file__).parent.parent.parent.absolute()
+        current = Path(__file__).resolve().parents[2]
         max_iterations = 10
 
         for _ in range(max_iterations):

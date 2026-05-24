@@ -32,7 +32,6 @@ from core.shared.navigation import return_to_orchestrator
 from core.shared.project_paths import ProjectPaths
 
 # Import Runner core modules
-from core.runner.config import RunnerConfig
 from core.runner.core.executor import MiniZincExecutor
 from core.runner.core.result_handler import ResultHandler
 from core.runner.core.solvers import SolverType, SolverManager
@@ -59,7 +58,7 @@ class RunnerInterface(tk.Frame):
         self._init_theme()
 
         # Setup window properties
-        self.root.title("CLP-RCLP Test Runner v2.0.0")
+        self.root.title("CLP-RCLP Test Runner v2.1.0")
         self.root.geometry("950x650")
         self.root.resizable(False, False)
         self._center_window()
@@ -449,7 +448,7 @@ class RunnerInterface(tk.Frame):
 
         tk.Label(
             footer,
-            text="v2.0.0",
+            text="v2.1.0",
             font=self.theme_dict["font_small"],
             fg=self.theme_dict["text_muted"],
             bg=self.theme_dict["bg_surface"],
@@ -823,4 +822,12 @@ class RunnerInterface(tk.Frame):
                 relief=tk.FLAT,
                 bd=0,
             ).pack(side=tk.LEFT)
+
+    @staticmethod
+    def _safe_int(value: str, fallback: int) -> int:
+        """Parse an integer from a text field, returning fallback on invalid input."""
+        try:
+            return int(str(value).strip())
+        except (TypeError, ValueError):
+            return fallback
 

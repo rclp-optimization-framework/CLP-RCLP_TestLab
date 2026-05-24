@@ -18,7 +18,7 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 echo "========================================================================"
-echo "CLP-RCLP System Center v2.0.0"
+echo "CLP-RCLP System Center v2.1.0"
 echo "========================================================================"
 echo ""
 echo "Launching System Center interface..."

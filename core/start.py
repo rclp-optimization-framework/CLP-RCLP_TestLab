@@ -25,7 +25,7 @@ try:
     from core.orchestration.orchestrator import launch_orchestrator
 
     print("=" * 70)
-    print("CLP-RCLP System Center v2.0.0")
+    print("CLP-RCLP System Center v2.1.0")
     print("=" * 70)
     print("\nLaunching System Center interface...")
     print("\nAccess all tools from the central hub:")

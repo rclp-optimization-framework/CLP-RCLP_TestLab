@@ -5,7 +5,7 @@ Converter Integration Test Script
 Tests file management, directory structure creation, and batch conversion.
 
 Usage:
-    python Scripts/testing/test_converter_integration.py
+    python scripts/testing/test_converter_integration.py
 
 Author: AVISPA Research Team
 Date: April 2026
@@ -16,6 +16,14 @@ import shutil
 import logging
 from pathlib import Path
 from typing import Tuple
+
+project_root = Path(__file__).resolve().parents[2]
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+
+from core.converter.core.converter_engine import ConverterEngine
+from core.converter.core.file_manager import FileManager
+from core.converter.core.jits_analyzer import JITSAnalyzer
 
 # Setup logging
 logging.basicConfig(
@@ -28,9 +36,7 @@ logger = logging.getLogger(__name__)
 
 def get_project_root() -> Path:
     """Find project root directory."""
-    # Scripts/testing/test_converter_integration.py -> project root is 3 levels up
-    current = Path(__file__).parent.parent.parent.absolute()
-    return current
+    return Path(__file__).resolve().parents[2]
 
 
 def test_integration() -> Tuple[bool, str]:
@@ -41,46 +47,21 @@ def test_integration() -> Tuple[bool, str]:
         (success: bool, message: str)
     """
     try:
-        import importlib.util
-
         project_root = get_project_root()
-
-        # Load converter modules
-        converter_engine_path = project_root / "Converter" / "core" / "converter_engine.py"
-        file_manager_path = project_root / "Converter" / "core" / "file_manager.py"
-        jits_analyzer_path = project_root / "Converter" / "core" / "jits_analyzer.py"
-
-        # Load converter_engine
-        spec = importlib.util.spec_from_file_location("converter_engine", converter_engine_path)
-        converter_engine_module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(converter_engine_module)
-        ConverterEngine = converter_engine_module.ConverterEngine
-
-        # Load file_manager
-        spec = importlib.util.spec_from_file_location("file_manager", file_manager_path)
-        file_manager_module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(file_manager_module)
-        FileManager = file_manager_module.FileManager
-
-        # Load jits_analyzer
-        spec = importlib.util.spec_from_file_location("jits_analyzer", jits_analyzer_path)
-        jits_analyzer_module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(jits_analyzer_module)
-        JITSAnalyzer = jits_analyzer_module.JITSAnalyzer
 
         logger.info("=" * 80)
         logger.info("CONVERTER INTEGRATION TEST")
         logger.info("=" * 80)
 
         # Create test output directory
-        test_battery = project_root / "Data" / "_Test_Converter_Integration"
+        test_battery = project_root / "experiments" / "results" / "_Test_Converter_Integration"
         if test_battery.exists():
             shutil.rmtree(test_battery)
 
         logger.info(f"Testing output structure creation...")
 
         # Setup
-        jits_path = project_root / "JITS2022" / "Code" / "Data"
+        jits_path = project_root / "external" / "jits2022" / "Code" / "data"
         directories = JITSAnalyzer.get_test_directories(jits_path)
 
         if not directories:

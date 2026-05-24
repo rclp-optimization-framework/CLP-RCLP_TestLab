@@ -1,6 +1,6 @@
 # CLP-RCLP TestLab Environment
 
-[![Version](https://img.shields.io/badge/version-2.0.0-brightgreen?style=flat-square)](.)
+[![Version](https://img.shields.io/badge/version-2.1.0-brightgreen?style=flat-square)](.)
 [![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](.)
 [![Python](https://img.shields.io/badge/python-3.8+-yellow?style=flat-square)](.)
 [![MiniZinc](https://img.shields.io/badge/minizinc-2.6+-ff69b4?style=flat-square)](.)
@@ -11,7 +11,7 @@ Professional lab environment for research and optimization of the **Charging Loc
 
 This framework provides a complete toolkit for:
 
-- **System Center**: Unified GUI for accessing all tools (v2.0.0)
+- **System Center**: Unified GUI for accessing all tools (v2.1.0)
 - **Mathematical Models**: CLP and RCLP formulations in MiniZinc
 - **Instance Generation**: Create synthetic and realistic test datasets
 - **Data Conversion**: Transform JSON to constraint programming format
@@ -21,7 +21,7 @@ This framework provides a complete toolkit for:
 
 ## Key Features
 
-### 🎯 System Center GUI (v2.0.0)
+### 🎯 System Center GUI (v2.1.0)
 
 - Unified interface to all tools
 - Dark/Light theme with persistent preferences
@@ -214,7 +214,7 @@ Complete documentation is available in the `docs/` directory:
 
 ## Features by Version
 
-### v2.0.0 (Current - April 2026)
+### v2.1.0 (Current - May 2026)
 
 - System Center GUI with theme support
 - Multi-solver integration
@@ -303,6 +303,6 @@ This project is licensed under the MIT License - see [LICENSE](LICENSE) file for
 
 ---
 
-**Version**: 2.0.0  
+**Version**: 2.1.0  
 **Last Updated**: April 20, 2026  
 **Status**: Production Ready

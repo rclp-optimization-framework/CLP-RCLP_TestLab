@@ -1,272 +1,187 @@
 # Scripts Directory
 
-Collection of utility scripts for data processing, generation, testing, and verification of the CLP-RCLP optimization framework.
+Collection of utility scripts for data processing, generation, testing, verification, solver checks, and warm-start experiments in the CLP-RCLP optimization framework.
 
 ## Directory Structure
 
-```
-scripts/
-├── data-processing/        # Data conversion and validation
-│   ├── convert_json_to_integer_dzn.py
-│   ├── validate_integer_dzn.py
-│   └── README.md
-│
-├── generation/             # Instance variant and synthetic generation
-│   ├── create_cork_variants.py
-│   ├── generate_synthetic_data.py
-│   └── README.md
-│
-├── setup/                  # Environment setup and validation
-│   ├── setup_and_validate.py
-│   └── README.md
-│
-├── solvers/                # Solver installation and testing
-│   ├── check_solvers.py              # Check available solvers
-│   ├── diagnose_solvers.py           # Diagnose solver issues
-│   ├── test_gurobi.py
-│   ├── test_multiple_solvers.py
-│   └── README.md
-│
-├── testing/                # Test suites and validation
-│   ├── test_generator.sh              (MAIN TEST SUITE)
-│   ├── test_clp_preliminary.sh
-│   ├── run_battery_project_tests.py
-│   ├── test_converter.py
-│   ├── test_converter_integration.py
-│   ├── test_initial_small_case.py
-│   └── README.md
-│
-├── ui-testing/             # UI interface validation
-│   ├── test_runner_ui.py
-│   ├── test_generator_ui.py
-│   └── README.md
-│
-├── utilities/              # Diagnostic and utility scripts
-│   ├── diagnose_cork.sh
-│   └── README.md
-│
-├── verification/           # Converter and model verification
-│   ├── analyze_distance_scaling.py
-│   ├── test_converter_against_jits2022.py
-│   ├── verify_converter_fidelity.py
-│   ├── verify_dzn_correctness.py
-│   └── (no individual README)
-│
-└── README.md               # This file
-```
+The top-level `scripts/` folder now groups reusable helpers into thematic subfolders:
 
-## Quick Start
+- `data-processing/` - Data conversion and validation helpers.
+- `generation/` - Instance generation and variant builders.
+- `setup/` - Environment setup and validation.
+- `solvers/` - Solver discovery and smoke tests.
+- `testing/` - Test suites and regression checks.
+- `ui-testing/` - UI validation scripts.
+- `utilities/` - Small diagnostics and one-off helpers.
+- `verification/` - Model and conversion verification.
+- `warm_start/` - Warm-start model, reference instances, and runner.
 
-### Launch System Center (Recommended)
+Root-level scripts are kept for direct execution and ad hoc diagnostics:
+
+- `run_with_cplex.py` - Main CPLEX runner with optional warm-start artifact generation.
+- `check_java_equivalence.py` - Java alignment checks.
+- `compare_dzn.py`, `compare_integer_float.py` - Comparison utilities.
+- `generate_instances.py`, `generate_battery_last.py`, `gen_dzn.py` - Generation helpers.
+- Debug and inspection helpers under names starting with `debug_` or `inspect`.
+- `test_converter_java_mode.py`, `tmp_regen_battery_java.py`, `task_script.py`, `analyze_t.py`, `explore_integer_search_variants.py` - Special-purpose scripts used during development.
+
+## Recommended Entry Points
 
 ```bash
+# Launch the application UI
 cd core
 python start.py
-```
 
-Then use the GUI to access all tools.
-
-### From Command Line
-
-```bash
-# First time: validate setup
+# Validate the environment
 python scripts/setup/setup_and_validate.py
 
-# Check available solvers
+# Check solver availability
 python scripts/solvers/check_solvers.py
 
-# Run test suite
+# Run the main regression suite
 bash scripts/testing/test_generator.sh
+
+# Run the warm-start sample
+python scripts/warm_start/run_warmstart.py --instance scripts/warm_start/instances/cork-1-line_Battery-Decided20_0.dzn --out scripts/warm_start/tmp/out_20_0.txt --time 10
 ```
 
-## Module Guide
+## Folder Guides
 
-### Data Processing (`data-processing/`)
+### `data-processing/`
 
 Convert and validate data formats.
 
-**Scripts:**
-- `convert_json_to_integer_dzn.py` - JSON → DZN conversion
-- `validate_integer_dzn.py` - Verify DZN file correctness
+- `convert_json_to_integer_dzn.py` - JSON to DZN conversion.
+- `validate_integer_dzn.py` - DZN file validation.
 
-**Usage:**
-```bash
-# Convert JSON to DZN
-python data-processing/convert_json_to_integer_dzn.py input.json
-
-# Validate DZN file
-python data-processing/validate_integer_dzn.py data.dzn
-```
-
-### Generation (`generation/`)
+### `generation/`
 
 Create test instances and variants.
 
-**Scripts:**
-- `create_cork_variants.py` - Extract Cork single-cycle variants
-- `generate_synthetic_data.py` - Generate random instances
+- `create_cork_variants.py` - Extract Cork single-cycle variants.
+- `generate_synthetic_data.py` - Generate random instances.
 
-**Usage:**
-```bash
-# Generate Cork variants
-python generation/create_cork_variants.py
+### `setup/`
 
-# Generate synthetic data
-python generation/generate_synthetic_data.py --buses 10 --stops 5
-```
+Configure and validate the environment.
 
-### Setup (`setup/`)
+- `setup_and_validate.py` - Validate system requirements.
 
-Configure and validate environment.
-
-**Scripts:**
-- `setup_and_validate.py` - Validate system requirements
-
-**Usage:**
-```bash
-python setup/setup_and_validate.py
-```
-
-### Solvers (`solvers/`)
+### `solvers/`
 
 Manage and test solver installation.
 
-**Scripts:**
-- `check_solvers.py` - List available solvers
-- `diagnose_solvers.py` - Diagnose solver issues
-- `test_gurobi.py` - Test Gurobi solver
-- `test_multiple_solvers.py` - Test all solvers
+- `check_solvers.py` - List available solvers.
+- `diagnose_solvers.py` - Diagnose solver issues.
+- `test_gurobi.py` - Smoke test for Gurobi.
+- `test_multiple_solvers.py` - Test multiple solvers.
 
-**Usage:**
-```bash
-# Check installed solvers
-python solvers/check_solvers.py
+### `testing/`
 
-# Diagnose issues
-python solvers/diagnose_solvers.py
+Execute regression and integration tests.
 
-# Test specific solver
-python solvers/test_gurobi.py
-```
+- `test_generator.sh` - Main test suite.
+- `test_clp_preliminary.sh` - Preliminary tests.
+- `test_converter.py` - Converter unit tests.
+- `test_converter_integration.py` - Integration tests.
+- `run_battery_project_tests.py` - Battery project tests.
+- `test_initial_small_case.py` - Small-case validation.
 
-### Testing (`testing/`)
+### `ui-testing/`
 
-Execute test suites.
+Validate the UI and its core flows.
 
-**Main Scripts:**
-- `test_generator.sh` - **MAIN** test suite (recommended)
-- `test_clp_preliminary.sh` - Preliminary tests
-- `test_converter.py` - Converter unit tests
-- `test_converter_integration.py` - Integration tests
-- `run_battery_project_tests.py` - Battery project tests
-- `test_initial_small_case.py` - Small case validation
+- `test_runner_ui.py` - Runner interface checks.
+- `test_generator_ui.py` - Generator interface checks.
 
-**Usage:**
-```bash
-# Run main test suite
-bash testing/test_generator.sh
+### `utilities/`
 
-# Run specific tests
-bash testing/test_clp_preliminary.sh
-python testing/test_converter.py
-```
+Small diagnostics and utility scripts.
 
-### UI Testing (`ui-testing/`)
+- `diagnose_cork.sh` - Cork instance analysis helper.
 
-Validate user interface and theme system.
-
-**Scripts:**
-- `test_runner_ui.py` - Test Runner interface
-- `test_generator_ui.py` - Test Generator interface
-
-**Tests:**
-- Theme switching (dark/light)
-- Component rendering
-- Window positioning
-- Responsive layout
-
-### Utilities (`utilities/`)
-
-Diagnostic tools.
-
-**Scripts:**
-- `diagnose_cork.sh` - Analyze Cork instance issues
-
-**Usage:**
-```bash
-bash utilities/diagnose_cork.sh
-```
-
-### Verification (`verification/`)
+### `verification/`
 
 Verify converter and model correctness.
 
-**Scripts:**
-- `test_converter_against_jits2022.py` - Verify converter accuracy
-- `verify_converter_fidelity.py` - Check conversion fidelity
-- `verify_dzn_correctness.py` - Validate DZN output
-- `analyze_distance_scaling.py` - Analyze scaling parameters
+- `test_converter_against_jits2022.py` - Converter accuracy checks.
+- `verify_converter_fidelity.py` - Conversion fidelity checks.
+- `verify_dzn_correctness.py` - DZN output validation.
+- `analyze_distance_scaling.py` - Scaling diagnostics.
+
+### `warm_start/`
+
+Warm-start model resources.
+
+- `clp_model_warmstart.mzn` - Standalone warm-start MiniZinc model.
+- `instances/` - Reference instances for warm-start runs.
+- `run_warmstart.py` - Lightweight runner for direct warm-start experiments.
 
 ## Use Cases
 
 ### New User Setup
 
 ```bash
-# 1. Validate environment
-python setup/setup_and_validate.py
-
-# 2. Check solvers
-python solvers/check_solvers.py
-
-# 3. Launch System Center
+python scripts/setup/setup_and_validate.py
+python scripts/solvers/check_solvers.py
 cd core && python start.py
 ```
 
 ### Generate Test Data
 
 ```bash
-# Via GUI (recommended)
 cd core && python start.py
-# Then use Instance Generator tool
+# Then use the Instance Generator tool
 
-# Via command line
-python generation/generate_synthetic_data.py --buses 10 --stops 5 --output test_instance
+python scripts/generation/generate_synthetic_data.py --buses 10 --stops 5 --output test_instance
 ```
 
 ### Run Optimization Tests
 
 ```bash
-# Via GUI (recommended)
-cd core && python start.py
-# Then use Test Runner tool
-
-# Via command line
-bash testing/test_generator.sh
+bash scripts/testing/test_generator.sh
+python scripts/testing/test_converter.py
 ```
 
 ### Convert Data Format
 
 ```bash
-# Via GUI
-cd core && python start.py
-# Then use Data Converter tool
-
-# Via command line
-python data-processing/convert_json_to_integer_dzn.py data.json
+python scripts/data-processing/convert_json_to_integer_dzn.py data.json
 ```
 
-### Verify Installation
+### Warm-Start Experiment
 
 ```bash
-# Check all requirements
-python setup/setup_and_validate.py
-
-# Test solvers
-python solvers/check_solvers.py
-
-# Run verification tests
-python verification/test_converter_against_jits2022.py
+python scripts/warm_start/run_warmstart.py --instance scripts/warm_start/instances/cork-1-line_Battery-Decided20_0.dzn --out scripts/warm_start/tmp/out_20_0.txt --time 10
 ```
+
+## Notes
+
+The warm-start flow is opt-in. The base model remains clean, and warm-start artifacts are written only under `scripts/warm_start/generated/` when `scripts/runner/run_with_cplex.py --warm-start-json ...` is used.
+
+## Data Paths (v2.0.0)
+
+All paths reference the reorganized repository structure:
+
+```
+../experiments/instances/           # Test instances (old: ../Data/)
+../experiments/results/             # Results (old: ../Tests/)
+../core/models/                     # Models (old: ../Models/)
+```
+
+## Documentation
+
+- [data-processing/README.md](data-processing/README.md)
+- [generation/README.md](generation/README.md)
+- [runner/README.md](runner/README.md)
+- [setup/README.md](setup/README.md)
+- [solvers/README.md](solvers/README.md)
+- [testing/README.md](testing/README.md)
+- [ui-testing/README.md](ui-testing/README.md)
+- [utilities/README.md](utilities/README.md)
+- [verification/README.md](verification/README.md)
+- [warm_start/README.md](warm_start/README.md)
+- [debug/README.md](debug/README.md)
 
 ## Data Paths (v2.0.0)
 
@@ -359,6 +274,6 @@ For detailed information:
 
 ---
 
-**Version**: 2.0.0  
+**Version**: 2.1.0  
 **Last Updated**: April 20, 2026  
 **Structure**: clp-rclp-framework pattern

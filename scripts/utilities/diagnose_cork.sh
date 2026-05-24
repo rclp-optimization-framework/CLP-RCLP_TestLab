@@ -16,10 +16,12 @@ CYAN='\033[0;36m'
 NC='\033[0m'
 
 # Configuration
-MODEL_PATH="Models/clp_model.mzn"
-DATA_DIR_CORK="Data/Battery Project Integer"
-DATA_DIR_OWN="Data/Battery Own"
-OUTPUT_DIR="Tests/Diagnostics"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+MODEL_PATH="$PROJECT_ROOT/core/models/clp_model.mzn"
+DATA_DIR_CORK="$PROJECT_ROOT/experiments/instances/Battery-Decided"
+DATA_DIR_OWN="$PROJECT_ROOT/experiments/instances/battery-own"
+OUTPUT_DIR="$PROJECT_ROOT/experiments/results/Diagnostics"
 TIMEOUT=120  # 2 minutes per instance
 SOLVER="gecode"
 

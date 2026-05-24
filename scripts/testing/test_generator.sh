@@ -23,9 +23,9 @@ echo ""
 
 # Configuration
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-MODEL_PATH="$PROJECT_ROOT/Models/clp_model.mzn"
-GENERATED_DIR="$PROJECT_ROOT/Data/Battery Generated"
-VARIANT_DIR="$PROJECT_ROOT/Data/Battery Project Variant"
+MODEL_PATH="$PROJECT_ROOT/core/models/clp_model.mzn"
+GENERATED_DIR="$PROJECT_ROOT/experiments/instances/battery-generated"
+VARIANT_DIR="$PROJECT_ROOT/experiments/instances/Battery-Decided"
 TIMEOUT=60
 
 cd "$PROJECT_ROOT"
@@ -48,7 +48,7 @@ if ls "$VARIANT_DIR"/*.dzn 1> /dev/null 2>&1; then
     TESTS_PASSED=$((TESTS_PASSED + 1))
 else
     echo -e "${RED}✗ FAIL${NC}: No Cork variants found"
-    echo -e "  ${YELLOW}Run:${NC} python Scripts/generation/create_cork_variants.py"
+    echo -e "  ${YELLOW}Run:${NC} python scripts/generation/create_cork_variants.py"
     TESTS_FAILED=$((TESTS_FAILED + 1))
 fi
 echo ""
@@ -60,7 +60,7 @@ echo ""
 echo -e "${BLUE}[TEST 2]${NC} Checking generator script..."
 TESTS_RUN=$((TESTS_RUN + 1))
 
-if [ -f "$PROJECT_ROOT/Generator/generator.py" ]; then
+if [ -f "$PROJECT_ROOT/core/generator/generator.py" ]; then
     echo -e "${GREEN}✓ PASS${NC}: Generator script found"
     TESTS_PASSED=$((TESTS_PASSED + 1))
 else

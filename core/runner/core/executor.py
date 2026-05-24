@@ -15,9 +15,12 @@ from typing import Dict, Tuple, Optional
 import logging
 import time
 
+from core.shared.project_paths import ProjectPaths
 from .solvers import SolverType, SolverManager
 
 logger = logging.getLogger(__name__)
+
+DEFAULT_CPLEX_OPTIONS = {}
 
 
 class MiniZincExecutor:
@@ -37,7 +40,7 @@ class MiniZincExecutor:
         if not self.model_path.exists():
             raise FileNotFoundError(f"Model not found: {model_path}")
 
-    def execute(self, dzn_file: str, solver: SolverType = SolverType.CHUFFED) -> Tuple[bool, Optional[Dict], Optional[float]]:
+    def execute(self, dzn_file, solver: SolverType = SolverType.CHUFFED, solver_options: Optional[Dict] = None) -> Tuple[bool, Optional[Dict], Optional[float]]:
         """
         Execute MiniZinc with given instance and solver.
 
@@ -50,23 +53,36 @@ class MiniZincExecutor:
             Result contains: num_buses, num_stations, charged_stations,
                            charging_locations, time_deviation, solver, execution_time
         """
-        dzn_path = Path(dzn_file)
-        if not dzn_path.exists():
-            logger.error(f"Instance file not found: {dzn_file}")
-            return False, None, None
+        # Accept a single DZN path or a list of DZN paths
+        if isinstance(dzn_file, (list, tuple)):
+            dzn_paths = [Path(p) for p in dzn_file]
+        else:
+            dzn_paths = [Path(dzn_file)]
+
+        for p in dzn_paths:
+            if not p.exists():
+                logger.error(f"Instance file not found: {p}")
+                return False, None, None
 
         try:
             solver_name = SolverManager.get_minizinc_solver_name(solver)
 
-            cmd = [
-                "minizinc",
-                "--solver", solver_name,
-                str(self.model_path),
-                str(dzn_path)
-            ]
+            # Build base command and insert solver-specific options when provided
+            cmd = ["minizinc", "--solver", solver_name]
 
+            # Global time limit (ms) for minizinc driver
             if self.timeout_seconds and self.timeout_seconds > 0:
-                cmd[4:4] = ["--time-limit", str(self.timeout_seconds * 1000)]
+                cmd += ["--time-limit", str(self.timeout_seconds * 1000)]
+
+            # Solver specific options (supported for CPLEX wrapper in MiniZinc)
+            if solver == SolverType.CPLEX:
+                effective_options = dict(solver_options or {})
+                if 'solver_time_limit' in effective_options and effective_options['solver_time_limit'] is not None:
+                    # solver_time_limit expects milliseconds
+                    cmd += ["--solver-time-limit", str(int(effective_options['solver_time_limit']))]
+
+            # Append model and instance(s)
+            cmd += [str(self.model_path)] + [str(p) for p in dzn_paths]
 
             logger.debug(f"Running: {' '.join(cmd)}")
 
@@ -88,7 +104,8 @@ class MiniZincExecutor:
 
             # Parse output
             if result.returncode == 0:
-                success, parsed_result = self._parse_solution(result.stdout, dzn_path, solver)
+                # Use the primary instance DZN (first path) for metadata extraction
+                success, parsed_result = self._parse_solution(result.stdout, dzn_paths[0], solver)
                 if success and parsed_result:
                     parsed_result['execution_time'] = execution_time
                     parsed_result['solver'] = SolverManager.get_display_name(solver)
@@ -117,8 +134,10 @@ class MiniZincExecutor:
             (success: bool, result: dict or None)
         """
         try:
-            # Check if satisfiable - look for actual "UNSATISFIABLE" marker
-            if output.strip().startswith("UNSATISFIABLE") or "% UNSATISFIABLE" in output:
+            # Check if satisfiable - look for common "UNSAT"/"UNSATISFIABLE" markers
+            # MiniZinc/solvers may print variants such as "=====UNSATISFIABLE=====",
+            # "% UNSATISFIABLE", or plain "UNSATISFIABLE". Match common patterns.
+            if re.search(r"UNSATISFIABLE", output, re.IGNORECASE) or re.search(r"={2,}\s*UNSAT", output, re.IGNORECASE) or "% UNSATISFIABLE" in output:
                 logger.info(f"Instance is UNSATISFIABLE with {SolverManager.get_display_name(solver)}")
                 return False, {
                     "status": "unsatisfiable",

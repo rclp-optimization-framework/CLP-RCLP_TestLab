@@ -49,3 +49,10 @@ class RunnerConfig:
     # MiniZinc
     SOLVER = "chuffed"
     TIMEOUT_SECONDS = 300  # 5 minutes per test
+
+    # CPLEX defaults used by the runner when the CPLEX backend is selected.
+    # These mirror the Java reference runs found in external/jits2022 logs.
+    CPLEX_PARALLEL = 4
+    CPLEX_RANDOM_SEED = 0
+    CPLEX_MIPFOCUS = 0
+    CPLEX_GENERATE_PARAM_FILE = True

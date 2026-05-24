@@ -30,7 +30,7 @@ MODEL_FILE = "clp_model.mzn"
 
 # Test cases (small ones first)
 SMALL_TEST_CASES = [
-    "Data/Battery Own/noncity_5buses-8stations.dzn",
+    "experiments/instances/battery-own/noncity_5buses-8stations.dzn",
 ]
 
 # Solver configuration
@@ -227,8 +227,8 @@ def test_case(model_file: Path, data_file: Path, case_name: str, time_limit_ms: 
 
 def main():
     """Main function to run tests."""
-    project_root = Path(__file__).parent.parent
-    model_file = project_root / "Models" / MODEL_FILE
+    project_root = Path(__file__).resolve().parents[2]
+    model_file = project_root / "core" / "models" / MODEL_FILE
 
     if not model_file.exists():
         logger.error(f"Model file not found: {model_file}")

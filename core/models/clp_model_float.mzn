@@ -130,7 +130,8 @@ constraint forall(b in B, i in num_stops[b]+1..max_stops) (
 % H. FUNCION OBJETIVO
 % -----------------------------
 
-solve minimize sum(st in ST)(xst[st]);
+solve :: int_search([xbi[b,i] | b in B, i in 1..max_stops], input_order, indomain_min, complete)
+    minimize sum(st in ST)(xst[st]);
 
 output [
 "Estaciones instaladas: ", show(xst), "\n",

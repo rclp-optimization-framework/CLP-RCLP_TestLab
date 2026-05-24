@@ -4,7 +4,7 @@ Professional interface for converting JITS2022 test batteries from JSON format t
 
 ## Overview
 
-The Converter tool provides an intuitive GUI to transform JSON bus schedule files from the JITS2022 dataset into either integer-scaled DZN format or the original decimal DZN format used by the external model.
+The Converter tool provides an intuitive GUI to transform JSON bus schedule files from the JITS2022 dataset into the Java-compatible integer DZN format used by the CLP-RCLP models.
 
 ## Features
 
@@ -16,8 +16,8 @@ The Converter tool provides an intuitive GUI to transform JSON bus schedule file
 - **Real-time Progress**: Monitor conversion status with live logging
 - **Dark/Light Themes**: Professional UI with theme switching
 - **Tooltips**: Context help on all major controls
-- **Differentiated Scaling**: Energy-related values scaled by 1000, time values unscaled for MiniZinc
-- **Format Selection**: Switch between normalized integer output and original decimal output
+- **Differentiated Scaling**: Energy-related values scaled by 1000, time values kept in seconds for MiniZinc
+- **Single Output Mode**: Java-compatible integer output only
 
 ## Usage
 
@@ -38,9 +38,9 @@ python Converter/converter.py
    - Option 2: Select specific test files
 
 3. **Choose Output Battery**
-   - Select an existing battery: Battery Own, Battery Project Integer, etc.
+  - Select an existing battery: Battery Own, Battery Project Integer, etc.
   - Files automatically organized by test name and solver subdirectories
-  - Select the conversion format before starting the batch
+  - The converter always writes Java-compatible integer data
 
 4. **Start Conversion**
    - Click "Convert" to begin

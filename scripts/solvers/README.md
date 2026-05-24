@@ -7,30 +7,30 @@ Professional scripts for managing and testing multiple solvers in the CLP-RCLP e
 ### 1. check_solvers.py
 Verify which solvers are available on your system.
 ```bash
-python Scripts/solvers/check_solvers.py
+python scripts/solvers/check_solvers.py
 ```
-Output: Console report + JSON report in `Tests/solver_check_report.json`
+Output: Console report + JSON report in `experiments/results/solver_check_report.json`
 
 ### 2. diagnose_solvers.py
 Comprehensive solver diagnosis with actual model execution testing.
 ```bash
-python Scripts/solvers/diagnose_solvers.py Data/Battery\ Own/instance.dzn [model]
+python scripts/solvers/diagnose_solvers.py experiments/instances/battery-own/noncity_5buses-8stations.dzn [model]
 ```
-Output: Detailed JSON reports in `Tests/diagnostics/`
+Output: Detailed JSON reports in `experiments/results/diagnostics/`
 
 ### 3. test_multiple_solvers.py
 Execute instance with multiple solvers and compare performance.
 ```bash
-python Scripts/solvers/test_multiple_solvers.py Data/Battery\ Own/instance.dzn [model] [solvers...]
+python scripts/solvers/test_multiple_solvers.py experiments/instances/battery-own/noncity_5buses-8stations.dzn [model] [solvers...]
 ```
-Output: JSON results in `Tests/solver_tests/`
+Output: JSON results in `experiments/results/solver_tests/`
 
 ### 4. test_gurobi.py
 Specific Gurobi solver diagnosis and license checking.
 ```bash
-python Scripts/solvers/test_gurobi.py Data/Battery\ Own/instance.dzn [model]
+python scripts/solvers/test_gurobi.py experiments/instances/battery-own/noncity_5buses-8stations.dzn [model]
 ```
-Output: Gurobi status report in `Tests/diagnostics/`
+Output: Gurobi status report in `experiments/results/diagnostics/`
 
 ## Supported Solvers
 
@@ -74,23 +74,23 @@ Gurobi is detected in the system but needs:
 1. Get license: https://www.gurobi.com/academia/academic-program-and-licenses/
 2. Install Gurobi: https://www.gurobi.com/
 3. Set environment variable: `export GUROBI_HOME=/path/to/gurobi`
-4. Verify: `python Scripts/solvers/test_gurobi.py Data/Battery\ Own/instance.dzn`
+4. Verify: `python scripts/solvers/test_gurobi.py experiments/instances/battery-own/noncity_5buses-8stations.dzn`
 
 ## Installation
 
 ### Check Solver Status
 ```bash
-python Scripts/solvers/check_solvers.py
+python scripts/solvers/check_solvers.py
 ```
 
 ### Verify with Actual Execution
 ```bash
-python Scripts/solvers/diagnose_solvers.py Data/Battery\ Own/noncity_5buses-8stations.dzn
+python scripts/solvers/diagnose_solvers.py experiments/instances/battery-own/noncity_5buses-8stations.dzn
 ```
 
 ### Diagnose Gurobi
 ```bash
-python Scripts/solvers/test_gurobi.py Data/Battery\ Own/noncity_5buses-8stations.dzn
+python scripts/solvers/test_gurobi.py experiments/instances/battery-own/noncity_5buses-8stations.dzn
 ```
 
 ## Integration with Runner
@@ -104,12 +104,12 @@ The Runner UI automatically:
 ## Output Organization
 
 ### Successful Results
-- Location: `Tests/Output/{Battery}/{Solver}/`
+- Location: `experiments/results/{Battery}/{Solver}/`
 - Formats: JSON and TXT
 - Contains: instance data, solution, execution time
 
 ### Diagnostics
-- Location: `Tests/Diagnostics/{Solver}/`
+- Location: `experiments/results/diagnostics/{Solver}/`
 - Formats: JSON and TXT
 - Contains: error information, execution time, solver used
 
@@ -118,7 +118,7 @@ The Runner UI automatically:
 ### Solver Not Found
 ```bash
 # Check installation
-python Scripts/solvers/check_solvers.py
+python scripts/solvers/check_solvers.py
 
 # Verify MiniZinc
 minizinc --version
@@ -135,7 +135,7 @@ echo $PATH
 ### Gurobi Not Working
 ```bash
 # Diagnose Gurobi specifically
-python Scripts/solvers/test_gurobi.py Data/Battery\ Own/instance.dzn
+python scripts/solvers/test_gurobi.py experiments/instances/battery-own/noncity_5buses-8stations.dzn
 
 # Check license
 gurobi_cl --version

@@ -15,9 +15,10 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Configuration
-MODEL_PATH="Models/clp_model.mzn"
-DATA_DIR="Data/Battery Project Integer"
-OUTPUT_DIR="Tests/Preliminary_Tests"
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+MODEL_PATH="$PROJECT_ROOT/core/models/clp_model.mzn"
+DATA_DIR="$PROJECT_ROOT/experiments/instances/battery-own"
+OUTPUT_DIR="$PROJECT_ROOT/experiments/results/Preliminary_Tests"
 TIMEOUT=300  # 5 minutes in seconds
 SOLVER="gecode"  # or "chuffed", "coin-bc"
 
@@ -40,8 +41,8 @@ echo ""
 
 # Test instances (first 2 from each variant as requested)
 TEST_CASES=(
-    "cork-1-line20_0.dzn"
-    "cork-1-line20_5.dzn"
+    "noncity_5buses-8stations.dzn"
+    "noncity_10buses-15stations.dzn"
 )
 
 # Counters

@@ -6,7 +6,7 @@ Tests JSON to DZN conversion functionality with a sample from JITS2022.
 Validates conversion output and reports success/failure.
 
 Usage:
-    python Scripts/testing/test_converter.py
+    python scripts/testing/test_converter.py
 
 Author: AVISPA Research Team
 Date: April 2026
@@ -17,6 +17,13 @@ import json
 import logging
 from pathlib import Path
 from typing import Tuple
+
+project_root = Path(__file__).resolve().parents[2]
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+
+from core.converter.core.converter_engine import ConverterEngine
+from core.converter.core.jits_analyzer import JITSAnalyzer
 
 # Setup logging
 logging.basicConfig(
@@ -29,9 +36,7 @@ logger = logging.getLogger(__name__)
 
 def get_project_root() -> Path:
     """Find project root directory."""
-    # Scripts/testing/test_converter.py -> project root is 3 levels up
-    current = Path(__file__).parent.parent.parent.absolute()
-    return current
+    return Path(__file__).resolve().parents[2]
 
 
 def test_converter() -> Tuple[bool, str]:
@@ -42,35 +47,14 @@ def test_converter() -> Tuple[bool, str]:
         (success: bool, message: str)
     """
     try:
-        import importlib.util
-
         project_root = get_project_root()
-
-        # Load converter modules
-        converter_engine_path = project_root / "Converter" / "core" / "converter_engine.py"
-        jits_analyzer_path = project_root / "Converter" / "core" / "jits_analyzer.py"
-
-        if not converter_engine_path.exists():
-            return False, f"Converter engine not found: {converter_engine_path}"
-
-        # Load converter_engine
-        spec = importlib.util.spec_from_file_location("converter_engine", converter_engine_path)
-        converter_engine_module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(converter_engine_module)
-        ConverterEngine = converter_engine_module.ConverterEngine
-
-        # Load jits_analyzer
-        spec = importlib.util.spec_from_file_location("jits_analyzer", jits_analyzer_path)
-        jits_analyzer_module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(jits_analyzer_module)
-        JITSAnalyzer = jits_analyzer_module.JITSAnalyzer
 
         logger.info("=" * 80)
         logger.info("CONVERTER VERIFICATION TEST")
         logger.info("=" * 80)
 
         # Find a test JSON file
-        jits_path = project_root / "JITS2022" / "Code" / "Data"
+        jits_path = project_root / "external" / "jits2022" / "Code" / "data"
         if not jits_path.exists():
             return False, f"JITS path not found: {jits_path}"
 
@@ -104,7 +88,7 @@ def test_converter() -> Tuple[bool, str]:
         logger.info(f"  - Lines: {metadata.get('num_lines')}")
 
         # Test conversion
-        output_dir = project_root / "Tests" / "Temp_Converter_Test"
+        output_dir = project_root / "experiments" / "results" / "Temp_Converter_Test"
         output_dir.mkdir(parents=True, exist_ok=True)
 
         output_file = output_dir / f"{test_json.stem}_test.dzn"

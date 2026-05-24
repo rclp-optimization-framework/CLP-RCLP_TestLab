@@ -1,0 +1,4 @@
+PySimpleGUI>=4.60
+minizinc>=0.26.0
+pydantic>=2.0
+requests>=2.28

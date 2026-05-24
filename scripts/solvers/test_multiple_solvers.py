@@ -6,7 +6,7 @@ Execute a test instance with multiple solvers and compare results.
 Useful for performance benchmarking and solver validation.
 
 Authors: Andrey Quiceno and Juan Francesco García (AVISPA Team)
-Usage: python Scripts/solvers/test_multiple_solvers.py <instance_path> [model] [solvers...]
+Usage: python scripts/solvers/test_multiple_solvers.py <instance_path> [model] [solvers...]
 """
 
 import subprocess
@@ -56,7 +56,7 @@ class MultipleSolverTester:
     def _get_model_file(self) -> Path:
         """Get model file path."""
         model_name = "clp_model.mzn" if self.model == "CLP" else "rclp_model.mzn"
-        return self.project_root / "Models" / model_name
+        return self.project_root / "core" / "models" / model_name
 
     def test_solver(self, solver: str, timeout: int = 300) -> Dict:
         """
@@ -158,7 +158,7 @@ class MultipleSolverTester:
     def save_results(self, output_dir: Optional[str] = None) -> str:
         """Save results to JSON file."""
         if not output_dir:
-            output_dir = str(self.project_root / "Tests" / "solver_tests")
+            output_dir = str(self.project_root / "experiments" / "results" / "solver_tests")
 
         Path(output_dir).mkdir(parents=True, exist_ok=True)
 
@@ -190,8 +190,8 @@ class MultipleSolverTester:
 def main():
     """Main entry point."""
     if len(sys.argv) < 2:
-        print("Usage: python test_multiple_solvers.py <instance_path> [model] [solvers...]")
-        print(r"Example: python test_multiple_solvers.py Data/Battery\ Own/instance.dzn CLP chuffed gecode")
+        print("Usage: python scripts/solvers/test_multiple_solvers.py <instance_path> [model] [solvers...]")
+        print(r"Example: python scripts/solvers/test_multiple_solvers.py experiments/instances/battery-own/noncity_5buses-8stations.dzn CLP chuffed gecode")
         sys.exit(1)
 
     instance_path = sys.argv[1]

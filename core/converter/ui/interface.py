@@ -52,7 +52,7 @@ class ConverterInterface(tk.Frame):
         self._init_theme()
 
         # Setup window
-        self.root.title("CLP-RCLP JSON to DZN Converter v2.0.0")
+        self.root.title("CLP-RCLP JSON to DZN Converter v2.1.0")
         self.root.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}")
         self.root.resizable(False, False)
         self._center_window()
@@ -70,7 +70,7 @@ class ConverterInterface(tk.Frame):
         # State variables
         self.available_tests: List[str] = []
         self.available_batteries: List[str] = []
-        self.output_format_var = tk.StringVar(value="normalized")
+        self.output_format_var = tk.StringVar(value="java")
 
         # Build UI
         self._build_ui()
@@ -360,7 +360,7 @@ class ConverterInterface(tk.Frame):
         frame = tk.Frame(parent, bg=self.theme_dict["bg_base"])
         frame.pack(fill=tk.X, pady=(0, 10))
 
-        # Conversion format
+        # Conversion format (Java-compatible only)
         tk.Label(
             frame,
             text="Conversion Format:",
@@ -372,32 +372,18 @@ class ConverterInterface(tk.Frame):
         format_frame = tk.Frame(frame, bg=self.theme_dict["bg_base"])
         format_frame.pack(fill=tk.X, pady=(0, 10))
 
-        tk.Radiobutton(
+        # NOTE: Only Java-compatible mode is supported.
+        format_info = tk.Label(
             format_frame,
-            text="Normalized integer mode",
-            variable=self.output_format_var,
-            value="normalized",
+            text="Java-compatible mode (scaled energy units, seconds for time)",
             bg=self.theme_dict["bg_base"],
-            fg=self.theme_dict["text_primary"],
-            selectcolor=self.theme_dict["bg_surface"],
-            command=self._on_format_change
-        ).pack(anchor=tk.W)
-
-        # NOTE: "Original decimal mode" removed — use "normalized" or "java"
-        tk.Radiobutton(
-            format_frame,
-            text="Java-compatible mode",
-            variable=self.output_format_var,
-            value="java",
-            bg=self.theme_dict["bg_base"],
-            fg=self.theme_dict["text_primary"],
-            selectcolor=self.theme_dict["bg_surface"],
-            command=self._on_format_change
-        ).pack(anchor=tk.W)
+            fg=self.theme_dict["text_primary"]
+        )
+        format_info.pack(anchor=tk.W)
 
         Tooltip(
             format_frame,
-            "Normalized keeps the current scaled integer output. Java-compatible outputs Java-style energy and time units.",
+            "Converts to Java-compatible units: energy in distance units (m), time in seconds, using experiment parameters.",
             self.theme_dict
         )
 
@@ -693,7 +679,7 @@ class ConverterInterface(tk.Frame):
         self.stop_btn.set_disabled(True)
 
     def _find_experiment_config(self, jits_path: Path) -> Optional[Path]:
-        """Find best experiment parameter file in the selected JITS dataset directory."""
+        """Find best experiment parameter file in the selected JITS dataset directory or parent."""
         priority = [
             "experiment_parameters.txt",
             "experiment_parameters_clean.txt",
@@ -701,14 +687,27 @@ class ConverterInterface(tk.Frame):
             "experiment_parameters_toy.txt",
         ]
 
+        # First try the current directory
         for filename in priority:
             candidate = jits_path / filename
             if candidate.exists():
                 return candidate
 
+        # Try parent directory (for subdirectories like cork-1-line/)
+        for filename in priority:
+            candidate = jits_path.parent / filename
+            if candidate.exists():
+                return candidate
+
+        # Wildcard search in current directory
         wildcard_matches = sorted(jits_path.glob("experiment_parameters*.txt"))
         if wildcard_matches:
             return wildcard_matches[0]
+
+        # Wildcard search in parent directory
+        parent_matches = sorted(jits_path.parent.glob("experiment_parameters*.txt"))
+        if parent_matches:
+            return parent_matches[0]
 
         return None
 
@@ -766,7 +765,7 @@ class ConverterInterface(tk.Frame):
 
         tk.Label(
             footer,
-            text="v2.0.0 | Click [?] icons for help | Select a battery and tests to convert",
+            text="v2.1.0 | Click [?] icons for help | Select a battery and tests to convert",
             bg=self.theme_dict["bg_surface"],
             fg=self.theme_dict["text_secondary"],
             font=("Arial", 8)
@@ -910,11 +909,8 @@ TIPS FOR SUCCESSFUL CONVERSION:
 
     def _on_format_change(self) -> None:
         """React to format selection changes."""
-        selected = self.output_format_var.get()
-        if selected == "java":
-            self._log("Java-compatible mode selected; outputs will follow Java unit conventions.", "info")
-        else:
-            self._log("Normalized integer mode selected; current scaled output will be used.", "info")
+        # Format is now Java-compatible only
+        self._log("Java-compatible mode: outputs will follow Java unit conventions.", "info")
 
     def _refresh_ui_colors(self) -> None:
         """Refresh UI colors after theme change by rebuilding the entire interface."""

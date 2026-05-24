@@ -6,7 +6,7 @@ Verify which solvers are available in the system and provide installation guidan
 Useful for diagnosing solver configuration issues.
 
 Authors: Andrey Quiceno and Juan Francesco García (AVISPA Team)
-Usage: python Scripts/solvers/check_solvers.py
+Usage: python scripts/solvers/check_solvers.py
 """
 
 import subprocess
@@ -132,6 +132,6 @@ if __name__ == "__main__":
     checker.print_report(results)
 
     # Save JSON report
-    report_path = Path(__file__).parent.parent.parent / "Tests" / "solver_check_report.json"
+    report_path = Path(__file__).resolve().parents[2] / "experiments" / "results" / "solver_check_report.json"
     report_path.parent.mkdir(parents=True, exist_ok=True)
     checker.save_json_report(results, str(report_path))
