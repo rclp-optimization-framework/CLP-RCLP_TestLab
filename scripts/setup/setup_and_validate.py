@@ -87,7 +87,7 @@ def main():
         logger.info("✓ ALL SYSTEMS READY!")
         logger.info("")
         logger.info("You can now run the full test battery:")
-        logger.info("  python Scripts/run_battery_project_tests.py")
+        logger.info("  bash scripts/testing/test_generator.sh")
         return 0
     else:
         logger.error("✗ SOME STEPS FAILED")

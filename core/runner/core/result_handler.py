@@ -103,6 +103,7 @@ class ResultHandler:
 
     def _save_json(self, path: Path, result: Dict, solver: str) -> None:
         """Save result as JSON with solver and execution time."""
+        deviation_minutes = self._time_deviation_minutes(result)
         json_data = {
             "solver": solver,
             "execution_time_seconds": round(result.get('execution_time', 0), 3),
@@ -110,7 +111,7 @@ class ResultHandler:
             "num_stations": result.get('num_stations', 0),
             "charged_stations": result.get('charged_stations', 0),
             "charging_locations": result.get('charging_locations', []),
-            "time_deviation_minutes": result.get('time_deviation', 0) / 10,  # convert back to minutes
+            "time_deviation_minutes": deviation_minutes,
             "timestamp": datetime.now().isoformat()
         }
 
@@ -123,7 +124,7 @@ class ResultHandler:
         num_stations = result.get('num_stations', 0)
         charged = result.get('charged_stations', 0)
         locations = result.get('charging_locations', [])
-        deviation = result.get('time_deviation', 0) / 10  # Convert back to minutes
+        deviation = self._time_deviation_minutes(result)
         exec_time = result.get('execution_time', 0)
 
         # Format charging locations as binary array
@@ -149,6 +150,17 @@ class ResultHandler:
 
         with open(path, 'w') as f:
             f.write("\n".join(lines))
+
+    @staticmethod
+    def _time_deviation_minutes(result: Dict) -> float:
+        """Normalize time deviation to minutes based on the model precision."""
+        deviation = float(result.get('time_deviation', 0) or 0)
+        precision = str(result.get('model_precision', '')).lower()
+
+        if precision == 'integer':
+            return deviation / 10
+
+        return deviation
 
     def _save_diagnostic_json(self, path: Path, result: Dict, solver: str, status: str) -> None:
         """Save diagnostic information as JSON."""

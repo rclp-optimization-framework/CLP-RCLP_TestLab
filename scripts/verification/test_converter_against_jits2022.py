@@ -19,10 +19,10 @@ project_root = Path(__file__).parent.parent.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
-from Converter.core.converter_engine import ConverterEngine
-from Converter.core.experiment_config import ExperimentConfig
-from Converter.core.data_loader import DataLoader
-from Scripts.verification.verify_converter_fidelity import VerifyConverterFidelity
+from core.converter.core.converter_engine import ConverterEngine
+from core.converter.core.experiment_config import ExperimentConfig
+from core.converter.core.data_loader import DataLoader
+from scripts.verification.verify_converter_fidelity import VerifyConverterFidelity
 
 logging.basicConfig(
     level=logging.INFO,
@@ -39,7 +39,7 @@ class ConverterTest:
         Initialize test runner.
 
         Args:
-            jits_data_root: Root path to JITS2022 test data (e.g., Data/cork-1-line)
+            jits_data_root: Root path to JITS2022 test data (e.g., external/jits2022/Code/data/cork-1-line)
         """
         self.jits_data_root = Path(jits_data_root)
         if not self.jits_data_root.exists():
@@ -184,13 +184,13 @@ def main():
     """Main entry point."""
     # Path to JITS2022 test data
     project_root = Path(__file__).parent.parent.parent
-    test_data_root = project_root / "JITS2022" / "Code" / "data" / "cork-1-line"
+    test_data_root = project_root / "external" / "jits2022" / "Code" / "data" / "cork-1-line"
 
     logger.info(f"Test data root: {test_data_root}")
 
     if not test_data_root.exists():
         logger.error(f"Test data directory not found: {test_data_root}")
-        logger.info("\nUsage: python test_converter_against_jits2022.py [path_to_test_data]")
+        logger.info("\nUsage: python scripts/verification/test_converter_against_jits2022.py [path_to_test_data]")
         return 1
 
     try:

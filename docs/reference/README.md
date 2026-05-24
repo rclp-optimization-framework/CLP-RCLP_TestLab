@@ -37,7 +37,7 @@ Examples:
 
 Examples:
 
-- [v2.0.0 Features](VERSION_HISTORY.md#v200---multi-tool-framework-april-2026)
+- [v2.1.0 Features](VERSION_HISTORY.md#v210---path-refactoring-and-java-compatibility-may-2026)
 - [Migration Guide](VERSION_HISTORY.md#migration-guide-v140--v200)
 - [Future Roadmap](VERSION_HISTORY.md#future-roadmap)
 

@@ -50,6 +50,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Imported design patterns from existing tools (themes, components, layouts)
 - All tools maintained backward compatibility
 
+## [2.1.0] - 2026-05-14
+
+### Added
+
+- **Java-compatible conversion mode**: A new converter mode that emits Java-style integer energy units and seconds-based time values to match the JITS2022 baseline.
+
+### Changed
+
+- **Results directory reorganization**: Runner results moved from `Tests/` to `experiments/results/runner/Run_N/Output/`. Diagnostics are stored under `experiments/results/diagnostics/{battery-type}/{instance}/error.txt` for failed/unsatisfiable/unknown cases.
+- **Converter modes**: Removed `original` (decimal) conversion mode from UI and core converter to avoid unsupported execution paths; supported modes now are `normalized` and `java`.
+- **Runner behavior**: Auto-detect DZN precision and select appropriate model file (`clp_model_float.mzn` or `clp_model.mzn`). Default solver switched to `cplex` and CLI `--solver` added.
+
+### Fixed
+
+- **RCLP temporal recursion**: Fixed sign bug in `rclp_model_float.mzn` time recursion constraint (now adds travel time instead of subtracting).
+
+### Removed
+
+- **Tests/** root folder usage removed; runner no longer writes outputs to `Tests/`. The folder can be deleted from repositories and CI artifacts.
+
 ## [1.5.0] - 2026-04-16
 
 ### Added

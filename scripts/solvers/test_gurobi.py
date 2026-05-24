@@ -6,7 +6,7 @@ Troubleshoot Gurobi solver setup and test execution.
 Gurobi requires proper DLL configuration which this script helps diagnose.
 
 Authors: Andrey Quiceno and Juan Francesco García (AVISPA Team)
-Usage: python Scripts/solvers/test_gurobi.py [instance_path] [model]
+Usage: python scripts/solvers/test_gurobi.py [instance_path] [model]
 """
 
 import subprocess
@@ -42,7 +42,7 @@ class GurobiTester:
     def _get_model_file(self) -> Path:
         """Get model file path."""
         model_name = "clp_model.mzn" if self.model == "CLP" else "rclp_model.mzn"
-        return self.project_root / "Models" / model_name
+        return self.project_root / "core" / "models" / model_name
 
     def check_gurobi_installation(self) -> Dict:
         """Check Gurobi installation status."""
@@ -260,7 +260,7 @@ class GurobiTester:
     def save_report(self, report: Dict, output_path: Optional[str] = None) -> str:
         """Save report as JSON."""
         if not output_path:
-            output_dir = self.project_root / "Tests" / "diagnostics"
+            output_dir = self.project_root / "experiments" / "results" / "diagnostics"
         else:
             output_dir = Path(output_path)
 
@@ -276,8 +276,8 @@ class GurobiTester:
 def main():
     """Main entry point."""
     if len(sys.argv) < 2:
-        print("Usage: python test_gurobi.py <instance_path> [model]")
-        print("Example: python test_gurobi.py Data/Battery\\ Own/noncity_5buses-8stations.dzn CLP")
+        print("Usage: python scripts/solvers/test_gurobi.py <instance_path> [model]")
+        print("Example: python scripts/solvers/test_gurobi.py experiments/instances/battery-own/noncity_5buses-8stations.dzn CLP")
         sys.exit(1)
 
     instance_path = sys.argv[1]

@@ -1,0 +1,15 @@
+======================================================================
+CLP-RCLP Test Execution Result
+======================================================================
+
+Solver:                 CPLEX
+Execution Time:         1.189 seconds
+Timestamp:              2026-05-17T20:25:48.577194
+
+Number of Buses:        10
+Number of Stations:     15
+Charged Stations:       0
+Charging Locations:     [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+Time Deviation:         420.0 minutes
+
+======================================================================

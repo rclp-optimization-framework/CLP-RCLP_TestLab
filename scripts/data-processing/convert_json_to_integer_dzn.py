@@ -419,9 +419,9 @@ def main():
             sys.exit(1)
     else:
         # Batch mode - convert all directories
-        project_root = Path(__file__).parent.parent
-        jits_data_dir = project_root / "JITS2022" / "Code" / "data"
-        output_base = project_root / "Data" / "Battery Project Integer"
+        project_root = Path(__file__).resolve().parents[2]
+        jits_data_dir = project_root / "external" / "jits2022" / "Code" / "data"
+        output_base = project_root / "experiments" / "instances" / "battery-own"
 
         if not jits_data_dir.exists():
             logger.error(f"JITS data directory not found: {jits_data_dir}")

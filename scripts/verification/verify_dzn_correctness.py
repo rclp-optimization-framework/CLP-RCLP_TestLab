@@ -26,7 +26,12 @@ def parse_dzn_array2d(content: str, pattern: str) -> List[List[int]]:
     cols = int(match.group(2))
     values_str = match.group(3)
 
-    numbers = re.findall(r'[-]?\d+', values_str)
+    cleaned_lines = []
+    for line in values_str.splitlines():
+        cleaned_lines.append(line.split('%', 1)[0])
+    cleaned_values = " ".join(cleaned_lines)
+
+    numbers = re.findall(r'[-]?\d+', cleaned_values)
     numbers = [int(n) for n in numbers]
 
     result = []
@@ -74,19 +79,20 @@ def verify_stations_padding(dzn_st_bi: List[List[int]], bus_idx: int,
     errors = []
 
     dzn_row = dzn_st_bi[bus_idx]
+    expected_stations = [station + 1 for station in json_stations]
     json_len = len(json_stations)
 
     # Check actual stations
     for i in range(json_len):
         if i < len(dzn_row):
-            if dzn_row[i] != json_stations[i]:
+            if dzn_row[i] != expected_stations[i]:
                 errors.append(
-                    f"Bus {bus_idx}, Stop {i}: Expected {json_stations[i]}, got {dzn_row[i]}"
+                    f"Bus {bus_idx}, Stop {i}: Expected {expected_stations[i]}, got {dzn_row[i]}"
                 )
 
     # Check padding (should be last station repeated)
     if json_len > 0:
-        last_station = json_stations[-1]
+        last_station = expected_stations[-1]
         for i in range(json_len, max_stops):
             if i < len(dzn_row):
                 if dzn_row[i] != last_station:
@@ -107,12 +113,12 @@ def verify_times(dzn_tau_bi: List[List[int]], bus_idx: int,
 
     for i in range(json_len):
         if i < len(dzn_row):
-            expected = json_times[i] * scale
+            expected = json_times[i] * 60
             actual = dzn_row[i]
             if actual != expected:
                 errors.append(
                     f"Bus {bus_idx}, Stop {i}: tau_bi expected {expected}, got {actual} "
-                    f"(difference: {actual - expected}, {(actual - expected) / scale:.2f} min)"
+                    f"(difference: {actual - expected}, {(actual - expected) / 60:.2f} min)"
                 )
 
     return len(errors) == 0, errors
@@ -185,7 +191,7 @@ def main():
             print(f"✓ Station sequence and padding correct")
 
         # Verify times
-        match, errors = verify_times(dzn_data['tau_bi'], bus_idx, times_min, scale=10)
+        match, errors = verify_times(dzn_data['tau_bi'], bus_idx, times_min, scale=60)
         if errors:
             print(f"\nTIME ERRORS ({len(errors)}):")
             for err in errors[:5]:

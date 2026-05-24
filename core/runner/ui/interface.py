@@ -32,7 +32,6 @@ from core.shared.navigation import return_to_orchestrator
 from core.shared.project_paths import ProjectPaths
 
 # Import Runner core modules
-from core.runner.config import RunnerConfig
 from core.runner.core.executor import MiniZincExecutor
 from core.runner.core.result_handler import ResultHandler
 from core.runner.core.solvers import SolverType, SolverManager
@@ -59,7 +58,7 @@ class RunnerInterface(tk.Frame):
         self._init_theme()
 
         # Setup window properties
-        self.root.title("CLP-RCLP Test Runner v2.0.0")
+        self.root.title("CLP-RCLP Test Runner v2.1.0")
         self.root.geometry("950x650")
         self.root.resizable(False, False)
         self._center_window()
@@ -236,16 +235,17 @@ class RunnerInterface(tk.Frame):
             state="readonly",
             style="Dark.TCombobox",
         )
-        self.dir_combo.current(0)
-        self.dir_combo.pack(fill=tk.X, padx=12, pady=(0, 12))
+        if dirs:
+            self.dir_combo.current(0)
+        self.dir_combo.pack(fill=tk.X, padx=12, pady=(0, 5))
         Tooltip(self.dir_combo, "Select test dataset directory", self.theme_dict)
 
-        Divider(card, self.theme_dict).pack(fill=tk.X, padx=12, pady=12)
+        Divider(card, self.theme_dict).pack(fill=tk.X, padx=5, pady=5)
 
         # Test instance selection
         SectionLabel(card, "Instance", self.theme_dict).pack(anchor="w", padx=12, pady=(0, 6))
         inst_frame = tk.Frame(card, bg=self.theme_dict["bg_elevated"])
-        inst_frame.pack(fill=tk.X, padx=12, pady=(0, 12))
+        inst_frame.pack(fill=tk.X, padx=12, pady=(0, 5))
 
         self.instance_var = tk.StringVar()
         self.instance_combo = ttk.Combobox(
@@ -263,12 +263,12 @@ class RunnerInterface(tk.Frame):
         refresh_btn.pack(side=tk.LEFT, padx=(6, 0))
         Tooltip(refresh_btn, "Reload list of available instances", self.theme_dict)
 
-        Divider(card, self.theme_dict).pack(fill=tk.X, padx=12, pady=12)
+        Divider(card, self.theme_dict).pack(fill=tk.X, padx=12, pady=5)
 
         # Solver selection
         SectionLabel(card, "Solver", self.theme_dict).pack(anchor="w", padx=12, pady=(0, 6))
         solver_frame = tk.Frame(card, bg=self.theme_dict["bg_elevated"])
-        solver_frame.pack(fill=tk.X, padx=12, pady=(0, 12))
+        solver_frame.pack(fill=tk.X, padx=12, pady=(0, 5))
 
         self.solver_var = tk.StringVar(value="chuffed")
         solver_names = [SolverManager.get_display_name(s) for s in SolverManager.get_available_solvers()]
@@ -302,7 +302,7 @@ class RunnerInterface(tk.Frame):
         self.model_var = tk.StringVar(value="CLP")
 
         model_frame = tk.Frame(card, bg=self.theme_dict["bg_elevated"])
-        model_frame.pack(fill=tk.X, padx=12, pady=(0, 12))
+        model_frame.pack(fill=tk.X, padx=12, pady=(0, 5))
 
         for model in ["CLP", "RCLP"]:
             rb = tk.Radiobutton(
@@ -317,7 +317,33 @@ class RunnerInterface(tk.Frame):
             )
             rb.pack(side=tk.LEFT, padx=8)
 
-        Divider(card, self.theme_dict).pack(fill=tk.X, padx=12, pady=12)
+        Divider(card, self.theme_dict).pack(fill=tk.X, padx=12, pady=5)
+
+        SectionLabel(card, "Number Type", self.theme_dict).pack(anchor="w", padx=12, pady=(0, 6))
+        precision_frame = tk.Frame(card, bg=self.theme_dict["bg_elevated"])
+        precision_frame.pack(fill=tk.X, padx=12, pady=(0, 5))
+
+        self.precision_var = tk.StringVar(value="integer")
+        for label, value in [("Integer", "integer"), ("Floating", "floating")]:
+            rb = tk.Radiobutton(
+                precision_frame,
+                text=label,
+                variable=self.precision_var,
+                value=value,
+                bg=self.theme_dict["bg_elevated"],
+                fg=self.theme_dict["text_primary"],
+                selectcolor=self.theme_dict["accent_primary"],
+                activebackground=self.theme_dict["bg_hover"],
+            )
+            rb.pack(side=tk.LEFT, padx=8)
+
+        Tooltip(
+            precision_frame,
+            "Integer models keep the current scaled workflow. Floating models preserve original decimal values.",
+            self.theme_dict,
+        )
+
+        Divider(card, self.theme_dict).pack(fill=tk.X, padx=12, pady=5)
 
         # Action buttons
         btn_frame = tk.Frame(card, bg=self.theme_dict["bg_elevated"])
@@ -422,7 +448,7 @@ class RunnerInterface(tk.Frame):
 
         tk.Label(
             footer,
-            text="v2.0.0",
+            text="v2.1.0",
             font=self.theme_dict["font_small"],
             fg=self.theme_dict["text_muted"],
             bg=self.theme_dict["bg_surface"],
@@ -508,10 +534,12 @@ class RunnerInterface(tk.Frame):
         if not batteries_path.exists():
             return []
 
-        # Get all subdirectories (batteries)
+        # Hide legacy original-decimal batteries from UI to avoid non-parity runs.
+        hidden_legacy_dirs = {"battery-original"}
+
         batteries = sorted([
             d.name for d in batteries_path.iterdir()
-            if d.is_dir() and not d.name.startswith('.')
+            if d.is_dir() and not d.name.startswith('.') and d.name not in hidden_legacy_dirs
         ])
 
         return batteries
@@ -529,14 +557,25 @@ class RunnerInterface(tk.Frame):
         """Start execution of the selected test instance."""
         instance = self.instance_var.get()
         model = self.model_var.get()
+        precision = self.precision_var.get()
         directory = self.dir_var.get()
         solver_name = self.solver_var.get()
 
-        if not instance or not model or not directory:
-            messagebox.showwarning("Missing Selection", "Please select directory, instance, and model.")
+        if not instance or not model or not precision or not directory:
+            messagebox.showwarning("Missing Selection", "Please select directory, instance, model, and number type.")
             return
 
-        self._log(f"Starting execution: {instance} ({model}) with {solver_name}", "info")
+        if directory == "battery-original":
+            self._log("'battery-original' is a legacy decimal dataset and is hidden from parity runs.", "warning")
+            self._log("Use 'battery-new' or 'battery-java-aligned' for Java-compatible CLP parity.", "warning")
+            messagebox.showwarning(
+                "Legacy Dataset",
+                "battery-original is legacy decimal data and can yield 0 stations by design.\n"
+                "Use battery-new or battery-java-aligned for Java-compatible runs."
+            )
+            return
+
+        self._log(f"Starting execution: {instance} ({model}, {precision}) with {solver_name}", "info")
         self.status_indicator.set_status("running", "Running...")
         self.run_btn.set_disabled(True)
         self.stop_btn.set_disabled(False)
@@ -544,12 +583,12 @@ class RunnerInterface(tk.Frame):
 
         self.execution_thread = threading.Thread(
             target=self._execute_test,
-            args=(directory, instance, model, solver_name),
+            args=(directory, instance, model, precision, solver_name),
             daemon=True
         )
         self.execution_thread.start()
 
-    def _execute_test(self, directory: str, instance: str, model: str, solver_name: str) -> None:
+    def _execute_test(self, directory: str, instance: str, model: str, precision: str, solver_name: str) -> None:
         """Execute test in background thread."""
         try:
             # Get solver type from display name
@@ -560,16 +599,17 @@ class RunnerInterface(tk.Frame):
 
             # Resolve model path using ProjectPaths
             if model == "RCLP":
-                model_path = ProjectPaths.rclp_model_path()
+                model_path = ProjectPaths.rclp_model_path(precision)
             else:  # Default to CLP
-                model_path = ProjectPaths.clp_model_path()
+                model_path = ProjectPaths.clp_model_path(precision)
 
             if not model_path.exists():
                 self._log(f"Model not found: {model_path}", "error")
                 self.status_indicator.set_status("error", "Error")
                 return
 
-            executor = MiniZincExecutor(str(model_path))
+            # Run without a hard execution time limit from the UI.
+            executor = MiniZincExecutor(str(model_path), timeout_seconds=None)
 
             data_path = Path(self.project_root) / "experiments" / "instances" / directory
             instance_path = data_path / f"{instance}.dzn"
@@ -579,7 +619,7 @@ class RunnerInterface(tk.Frame):
                 self.status_indicator.set_status("error", "Error")
                 return
 
-            self._log(f"Executing: {model} ({solver_name}) on {instance}", "key")
+            self._log(f"Executing: {model} [{precision}] ({solver_name}) on {instance}", "key")
 
             # execute() now returns tuple: (success: bool, result: Optional[Dict], execution_time: Optional[float])
             success, result_dict, exec_time = executor.execute(str(instance_path), solver_type)
@@ -591,7 +631,7 @@ class RunnerInterface(tk.Frame):
                 # Save results organized by test name and solver
                 test_name = instance.replace('.dzn', '')
                 handler = ResultHandler(
-                    str(Path(self.project_root) / "Tests" / "Output" / directory),
+                    str(Path(self.project_root) / "experiments" / "results" / "output" / directory),
                     test_name=test_name
                 )
                 success_save, json_path, txt_path = handler.save_results(instance, result_dict, SolverManager.get_display_name(solver_type))
@@ -610,7 +650,7 @@ class RunnerInterface(tk.Frame):
                     'minizinc_stderr': '',
                     'execution_time': exec_time
                 }
-                handler = ResultHandler(str(Path(self.project_root) / "Tests"))
+                handler = ResultHandler(str(Path(self.project_root) / "experiments" / "results"))
                 handler.save_diagnostic(instance, diag_result, SolverManager.get_display_name(solver_type), "unsatisfiable")
             else:
                 self._log(f"Execution failed with {solver_name}", "error")
@@ -782,4 +822,12 @@ class RunnerInterface(tk.Frame):
                 relief=tk.FLAT,
                 bd=0,
             ).pack(side=tk.LEFT)
+
+    @staticmethod
+    def _safe_int(value: str, fallback: int) -> int:
+        """Parse an integer from a text field, returning fallback on invalid input."""
+        try:
+            return int(str(value).strip())
+        except (TypeError, ValueError):
+            return fallback
 

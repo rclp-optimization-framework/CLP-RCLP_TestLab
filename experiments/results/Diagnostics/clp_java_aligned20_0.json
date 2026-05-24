@@ -1,0 +1,4 @@
+{"type": "statistics", "statistics": {"paths": 0, "flatIntVars": 112013, "flatIntConstraints": 220205, "method": "minimize", "flatTime": 66.5361}}
+{"type": "status", "status": "UNSATISFIABLE"}
+{"type": "statistics", "statistics": {"objectiveBound": 0, "nodes": 0, "openNodes": 1, "solveTime": 0.3140}}
+{"type": "statistics", "statistics": {"nSolutions": 0}}

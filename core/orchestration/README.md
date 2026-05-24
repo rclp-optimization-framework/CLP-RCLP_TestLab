@@ -55,7 +55,7 @@ Toggle between dark and light modes using the button in the header. Your prefere
 
 ## Version
 
-v2.0.0 - Central System Center Interface
+v2.1.0 - Central System Center Interface
 
 ## Authors
 

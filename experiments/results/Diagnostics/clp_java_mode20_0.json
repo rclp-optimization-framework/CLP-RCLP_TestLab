@@ -1,0 +1,6 @@
+{"type": "statistics", "statistics": {"paths": 0, "flatIntVars": 112013, "flatIntConstraints": 220205, "method": "minimize", "flatTime": 58.1218}}
+{"type": "statistics", "statistics": {"objective": 1, "nodes": 0, "solveTime": 52.6630}}
+{"type": "solution", "output": {"default": "Estaciones instaladas: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0]\nTotal estaciones: 1\nDesviacion total: 447360\n", "raw": "Estaciones instaladas: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0]\nTotal estaciones: 1\nDesviacion total: 447360\n"}, "sections": ["default", "raw"]}
+{"type": "status", "status": "OPTIMAL_SOLUTION"}
+{"type": "statistics", "statistics": {"objective": 1, "objectiveBound": 1, "nodes": 80, "solveTime": 52.6630}}
+{"type": "statistics", "statistics": {"nSolutions": 1}}

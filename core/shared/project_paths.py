@@ -157,13 +157,17 @@ class ProjectPaths:
         return cls.get_project_root() / "core" / "models"
 
     @classmethod
-    def clp_model_path(cls) -> Path:
+    def clp_model_path(cls, precision: str = "integer") -> Path:
         """CLP model file path."""
+        if precision == "floating":
+            return cls.models_dir() / "clp_model_float.mzn"
         return cls.models_dir() / "clp_model.mzn"
 
     @classmethod
-    def rclp_model_path(cls) -> Path:
+    def rclp_model_path(cls, precision: str = "integer") -> Path:
         """RCLP model file path."""
+        if precision == "floating":
+            return cls.models_dir() / "rclp_model_float.mzn"
         return cls.models_dir() / "rclp_model.mzn"
 
     # =========================================================================

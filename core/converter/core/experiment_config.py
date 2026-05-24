@@ -23,19 +23,19 @@ class ExperimentConfig:
 
     # Default values (in case config is missing)
     DEFAULTS = {
-        'cmax': 100.0,          # Battery capacity (kWh)
-        'cmin': 20.0,           # Minimum reserve (kWh)
+        'cmax': 120.0,          # Battery capacity (kWh)
+        'cmin': 15.0,           # Minimum reserve (kWh)
         'alpha': 10.0,          # Fast charging rate (kWh/min)
-        'mu': 5.0,              # Maximum delay allowed (min)
+        'mu': 4.0,              # Maximum delay allowed (min)
         'sm': 1.0,              # Safety margin (min)
         'psi': 1.0,             # Minimum charging time (min)
-        'beta': 10.0,           # Maximum charging time (min)
+        'beta': 486.0,          # Maximum charging time (reference-aligned output)
         'model_speed': 30,      # Minimum speed for model (km/h)
         'instance_speed': 50,   # Instance speed parameter (km/h)
         'rest_time': 10,        # Rest duration (min)
-        'dt_max': 30,           # Maximum delay tolerance (min)
-        'min_ct': 5,            # Minimum change time (min)
-        'charging_rate': 20,    # Charging rate (kWh/min)
+        'dt_max': 4,            # Maximum delay tolerance (min)
+        'min_ct': 1,            # Minimum change time (min)
+        'charging_rate': 10,    # Charging rate (kWh/min)
         'scale': 50,            # Scaling factor for integer conversion (increased from 10 to minimize distance precision loss)
     }
 
@@ -112,7 +112,19 @@ class ExperimentConfig:
         """
         try:
             with open(config_file, 'r', encoding='utf-8') as f:
-                lines = [line.strip() for line in f.readlines() if line.strip() and not line.startswith('#')]
+                raw_lines = f.readlines()
+
+            # Remove inline comments and blank lines.
+            # JITS files frequently use: "120000 # Capacity ...".
+            lines = []
+            for raw in raw_lines:
+                line = raw.strip()
+                if not line:
+                    continue
+                if '#' in line:
+                    line = line.split('#', 1)[0].strip()
+                if line:
+                    lines.append(line)
 
             # Expected order of parameter arrays (after first 3 lines)
             param_names = [
@@ -126,10 +138,15 @@ class ExperimentConfig:
             if len(lines) > 3:
                 for i, param_name in enumerate(param_names):
                     if i + 3 < len(lines):
-                        values_str = lines[i + 3].split(',')[0].strip()  # Take first value
+                        values_str = lines[i + 3].split(',')[0].strip()  # Take first value when list-like
                         try:
                             if param_name in self.params:
-                                if isinstance(self.DEFAULTS[param_name], int):
+                                if param_name in {'cmax', 'cmin'}:
+                                    # JITS2022 experiment files store battery values in mts units.
+                                    # Normalize to internal kWh-style units so to_scaled_dict() can
+                                    # apply the single required ×1000 conversion exactly once.
+                                    self.params[param_name] = float(values_str) / 1000.0
+                                elif isinstance(self.DEFAULTS[param_name], int):
                                     self.params[param_name] = int(values_str)
                                 else:
                                     self.params[param_name] = float(values_str)
@@ -229,9 +246,12 @@ class ExperimentConfig:
         Return all parameters with DIFFERENTIATED scaling for precision and MiniZinc compatibility.
 
         Scaling strategy:
-        - Energy parameters (Cmax, Cmin, alpha, D): Scaled by 1000
+        - Energy parameters (Cmax, Cmin, D): Scaled by 1000
           → 1 unit = 0.001 kWh (0.1% precision, minimal error propagation)
           → Eliminates truncation errors from distance-based energy calculations
+        - Charging rate (alpha): Scaled by 1000/60 (convert kWh/min to units/second)
+          → Formula: (charging_rate_kWh_per_min * 1000) / 60
+          → Matches Java convention for charging calculations
         - Time parameters (mu, SM, psi, beta, T, tau_bi): NO scaling (SCALE_TIME=1)
           → Keep as native minutes (avoids excessive Big-M, MiniZinc compatible)
 
@@ -252,11 +272,11 @@ class ExperimentConfig:
         return {
             'cmax': round(self.cmax * SCALE_ENERGY),           # 100 kWh -> 100000
             'cmin': round(self.cmin * SCALE_ENERGY),           # 20 kWh -> 20000
-            'alpha': round(self.alpha * SCALE_ENERGY),         # 10 kWh/min -> 10000
+            'alpha': round((self.alpha * SCALE_ENERGY) / 60),  # 10 kWh/min -> (10*1000)/60 = 167 units/second
             'mu': int(self.mu),                                # 5 min -> 5 (no scaling)
             'sm': int(self.sm),                                # 1 min -> 1 (no scaling)
             'psi': int(self.psi),                              # 1 min -> 1 (no scaling)
-            'beta': int(self.beta),                            # 10 min -> 10 (no scaling)
+            'beta': int(round(self.beta)),                     # 486.0 -> 486 (already reference-aligned)
             'scale_energy': SCALE_ENERGY,
             'scale_time': 1,  # Time is not scaled
         }

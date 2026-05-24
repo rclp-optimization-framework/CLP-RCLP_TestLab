@@ -151,7 +151,7 @@ See [overview/PROJECT_OVERVIEW.md](overview/PROJECT_OVERVIEW.md) for more.
 
 ## Version Information
 
-**Current Version**: 2.0.0 (April 2026)
+**Current Version**: 2.1.0 (May 2026)
 
 Major update with:
 
@@ -179,4 +179,4 @@ Documentation improvements welcome! See main README.md for contribution guidelin
 ---
 
 **Last Updated**: April 20, 2026  
-**Version**: 2.0.0
+**Version**: 2.1.0

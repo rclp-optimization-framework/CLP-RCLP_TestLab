@@ -4,6 +4,34 @@ Automated verification and testing scripts for the CLP-RCLP framework.
 
 ## Scripts
 
+### verify_original_decimal_converter.py
+
+**Purpose**: Verifies that the converter can emit the original decimal DZN format without rounding the source values.
+
+**What it tests**:
+
+- ✓ Station mapping remains stable
+- ✓ Travel times match the source JSON schedules
+- ✓ Energy values keep the original decimal distance precision
+- ✓ The generated DZN includes the original decimal format marker
+
+**Usage**:
+
+```bash
+# From project root
+python scripts/verification/verify_original_decimal_converter.py external/jits2022/Code/data/cork-1-line
+```
+
+**Exit Codes**:
+
+- `0`: Original decimal mode verified successfully ✓
+- `1`: Verification failed ✗
+
+**Notes**:
+
+- The script generates temporary DZN files and cleans them up automatically
+- It is intended for the new original decimal conversion mode exposed in the converter UI
+
 ### verify_window_transitions.py
 
 **Purpose**: Verifies window transition functionality between Orchestrator and Tool windows.

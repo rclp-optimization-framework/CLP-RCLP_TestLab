@@ -11,6 +11,7 @@ Date: April 2026
 import json
 import logging
 import csv
+from decimal import Decimal
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional
 
@@ -59,7 +60,7 @@ class DataLoader:
             return station_names, 0
 
     @staticmethod
-    def load_distances(input_folder: Path) -> Tuple[Dict[Tuple[int, int], float], int]:
+    def load_distances(input_folder: Path, preserve_precision: bool = False) -> Tuple[Dict[Tuple[int, int], float], int]:
         """
         Load distance matrix from distances_input.csv.
 
@@ -92,12 +93,15 @@ class DataLoader:
                         try:
                             from_id = int(row[0])
                             to_id = int(row[1])
-                            distance_km = float(row[2])
-                            distance_meters = int(distance_km * 1000)  # Convert km to meters
+                            if preserve_precision:
+                                distance_value = Decimal(row[2].strip())
+                            else:
+                                distance_km = float(row[2])
+                                distance_value = int(distance_km * 1000)  # Convert km to meters
 
                             # Store in both directions (symmetric)
-                            distances[(from_id, to_id)] = distance_meters
-                            distances[(to_id, from_id)] = distance_meters
+                            distances[(from_id, to_id)] = distance_value
+                            distances[(to_id, from_id)] = distance_value
 
                             max_station_id = max(max_station_id, from_id, to_id)
                         except ValueError as ve:

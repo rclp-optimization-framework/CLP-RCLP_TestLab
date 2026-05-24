@@ -182,9 +182,15 @@ class OrchestratorInterface(tk.Frame):
 
         def _unbind_mousewheel(_event=None):
             for widget in (canvas, scrollable_frame):
-                widget.unbind("<MouseWheel>")
-                widget.unbind("<Button-4>")
-                widget.unbind("<Button-5>")
+                try:
+                    # widget may have been destroyed; guard against TclError
+                    if getattr(widget, 'winfo_exists', lambda: False)():
+                        widget.unbind("<MouseWheel>")
+                        widget.unbind("<Button-4>")
+                        widget.unbind("<Button-5>")
+                except tk.TclError:
+                    # Ignore errors when the underlying Tk window no longer exists
+                    pass
 
         # Bind only to the canvas and scrollable_frame, not globally
         for widget in (canvas, scrollable_frame):

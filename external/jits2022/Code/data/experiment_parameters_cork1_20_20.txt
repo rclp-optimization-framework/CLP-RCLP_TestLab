@@ -1,0 +1,19 @@
+cork-1-line# name of the dataset and folder where data is
+240 # max execution time (mins)
+cplex # method used for solving the instance |cplex, heuristic|
+120000 # Capacity of the battery (mts) |60000, 90000, 120000|
+20# model speed (km/h) |20, 30, 40|
+20# instance speed (km/h) |20, 30, 40|
+20 # driver's rest time (mins) |0, 5, 10, 20|
+4 # Max delta time |5, 10, 15|
+1 # laura's |0, 1|
+0 # arriving without charging |0, 1|
+0 # robust |0, 1|
+0 # switching back to the primary route |0, 1|
+1 # min ct |0, 1, 2|
+0 # objective to optimize 0:CHARGERS, 1:TIME, 2:CHARGES, 4:BOTH_CHARGERS_CHARGES
+4 # Number of threads
+15000 # Cmin (mts)
+1 # security Margin (mins)
+10 # charging rate (km/min)
+1 # warming start for robust model |0, 1|

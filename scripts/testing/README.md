@@ -9,7 +9,7 @@ Comprehensive testing script for the instance generation system.
 
 **Usage**:
 ```bash
-bash test_generator.sh
+bash scripts/testing/test_generator.sh
 ```
 
 **Tests Included**:
@@ -28,7 +28,7 @@ Preliminary tests to validate basic CLP model functionality.
 
 **Usage**:
 ```bash
-bash test_clp_preliminary.sh
+bash scripts/testing/test_clp_preliminary.sh
 ```
 
 ### `run_battery_project_tests.py`
@@ -36,7 +36,7 @@ Test suite for Battery project instances.
 
 **Usage**:
 ```bash
-python run_battery_project_tests.py [options]
+python scripts/testing/run_battery_project_tests.py [options]
 ```
 
 ### `test_initial_small_case.py`
@@ -44,7 +44,7 @@ Initial small case tests to verify basic functionality.
 
 **Usage**:
 ```bash
-python test_initial_small_case.py
+python scripts/testing/test_initial_small_case.py
 ```
 
 ## Test Workflow
@@ -57,8 +57,8 @@ test_generator.sh (MAIN)
 └── Final report
 
 Then:
-├── run_battery_project_tests.py (complete validation)
-└── test_clp_preliminary.sh (diagnostics)
+├── scripts/testing/run_battery_project_tests.py (complete validation)
+└── scripts/testing/test_clp_preliminary.sh (diagnostics)
 ```
 
 ## Dependencies
@@ -73,5 +73,5 @@ Then:
 - **TIMEOUT**: Acceptable for very large instances (>20 buses)
 
 ## Related Documentation
-- Main test guide: `../../Docs/generated-system/README.md`
-- Model info: `../../Docs/model/`
+- Main test guide: `../../docs/overview/README.md`
+- Model info: `../../core/models/`
