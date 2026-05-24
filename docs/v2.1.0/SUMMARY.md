@@ -1,7 +1,194 @@
-# Session Summary: May 12-14, 2026
+# v2.1.0 Investigation Summary
 
-## Overview
-This session focused on diagnosing and resolving the semantic/scale mismatch between the original JITS2022 Java baseline and the Python/MiniZinc pipeline, particularly for battery instances. Critical fixes were implemented to achieve parity with the Java model.
+**Date**: May 12-14, 2026  
+**Focus**: Path reorganization, Java compatibility, model alignment, and warm-start implementation
+
+## Investigation Stages
+
+This directory contains comprehensive documentation of v2.1.0 development stages, each addressing specific technical challenges in aligning Python/MiniZinc implementation with Java baseline and implementing reproducible warm-start workflows.
+
+### Stage 1: Converter and Runner Correction  
+**File**: [STAGE_1_Converter_Runner_Correction.md](STAGE_1_Converter_Runner_Correction.md) (English)
+
+Addresses core converter and runner issues preventing Cork instance alignment with Java baseline. Documents restored `original` conversion mode, maintained `java` mode for semantic parity, and improved UNSATISFIABLE detection.
+
+**Key Fixes**:
+- Parameter generation in Java mode for Cork instances
+- Energy unit alignment (Cmax, Cmin) matching Java convention
+- Alpha emission in units per second
+- CPLEX UNSATISFIABLE detection correction
+
+---
+
+### Stage 2: Battery-Fixed vs Java-Aligned  
+**File**: [STAGE_2_Battery_Fixed_Java_Aligned.md](STAGE_2_Battery_Fixed_Java_Aligned.md) (English)
+
+Compares regenerated `Battery-Fixed` Cork instances with known-good `battery-java-aligned` baseline. Corrects instance generation by loading real JITS experiment configuration and distance maps.
+
+**Key Findings**:
+- Original generation used hardcoded incorrect parameters (model_speed=30, rest_time=10)
+- Distance map not loaded, causing incomplete data  
+- Corrected generator now uses real experiment config from JITS
+- Results written to `experiments/instances/Battery-Fixed`
+
+---
+
+### Stages 4-5: Integer vs Decimal Conversion & Converter Deep Analysis  
+**Files**:  
+- [STAGE_4_Integer_Decimal_Format.md](STAGE_4_Integer_Decimal_Format.md)
+- [STAGE_5A_Converter_44_Mismatch_Analysis.md](STAGE_5A_Converter_44_Mismatch_Analysis.md)
+- [STAGE_5B_Java_Cork1_All_Results.md](STAGE_5B_Java_Cork1_All_Results.md)
+- [STAGE_5C_Java_Cork1_Comparison.md](STAGE_5C_Java_Cork1_Comparison.md)
+- [STAGE_5D_Java_Cork1_Location_Evidence.md](STAGE_5D_Java_Cork1_Location_Evidence.md)
+- [STAGE_5E_Java_Cork1_Stage_Diagnostic.md](STAGE_5E_Java_Cork1_Stage_Diagnostic.md)
+
+Deep investigation into converter output format differences (integer vs decimal energy units) and semantic alignment between Python and Java implementations. Includes detailed comparison of Cork-1-line case `20_0` across formats.
+
+**Key Analysis**:
+- Converter format options (normalized, java, original)
+- Energy scaling differences (decimal kWh vs integer units)
+- Time unit conventions (minutes vs seconds)
+- JITS2022 baseline result verification
+- Model-converter semantic parity investigation
+
+---
+
+### Stage 6: Runner UI & Battery-Decided Target  
+**File**: [STAGE_6_Integer_Float_Battery_Decided.md](STAGE_6_Integer_Float_Battery_Decided.md) (English)
+
+Documents current runner status: CPLEX parameters no longer exposed to users, hidden internally. Targets validation against `Battery-Decided` dataset instead of previous targets.
+
+**Key Status**:
+- Runner UI simplified (CPLEX parameters hidden)
+- Equivalence checking retargeted to Battery-Decided
+- Float model reproduces Java reference for Battery-Decided
+- Integer model still divergent; requires separate correction
+
+---
+
+### Stage 6.2: Battery-Decided Alignment  
+**File**: [STAGE_6.2_Battery_Decided_Alignment.md](STAGE_6.2_Battery_Decided_Alignment.md) (translated from Spanish)
+
+Detailed alignment progress for Battery-Decided family between integer and float models. Corrects verifier objective and removes implicit CPLEX defaults affecting equivalence.
+
+**Key Findings**:
+- Java reference sequence: 20_0→11, 20_5→19, 20_10→19
+- Float model reproduces Java for Battery-Decided
+- Integer model still selects different station (e.g., 30)
+- Solver wrapper and search order affect station selection
+
+---
+
+### Stage 7: Integer Model Alignment  
+**File**: [STAGE_7_Integer_Float_Alignment.md](STAGE_7_Integer_Float_Alignment.md) (English)
+
+Addresses integer model time-to-energy relationship to align with float model. Corrects time unit assumptions (seconds vs minutes) in alpha scaling.
+
+**Key Corrections**:
+- Time-energy constraint fix: `alpha * ctbi >= 60 * ebi`
+- Avoids float operations in integer model
+- Added deterministic tie-breaker for diagnostics
+- Provided CPLEX verification scripts
+
+---
+
+### Stage 7.2: Integer Model with CPLEX Warm-Start  
+**File**: [STAGE_7.2_Integer_CPLEX_Warmstart.md](STAGE_7.2_Integer_CPLEX_Warmstart.md) (English)
+
+Aligns integer model with float reference solution using CPLEX warm-start without modifying float model. Implements optional warm-start via auxiliary DZN files.
+
+**Key Implementation**:
+- Added auxiliary arrays `xst_init_ws`, `xst_pref_ws` for warm-start
+- Maintained integer objective with weak tie-breaking
+- Multi-DZN file support in executor
+- Warm-start only when JSON reference provided
+
+---
+
+### Stage 7.3: Universal Runner with Optional Warm-Start  
+**File**: [STAGE_7.3_Universal_Runner_Warmstart.md](STAGE_7.3_Universal_Runner_Warmstart.md) (English)
+
+Ensures runner works universally across Cork, real, and synthetic instances. Makes warm-start truly optional without breaking normal execution.
+
+**Key Design**:
+- Runner functions without warm-start for normal cases
+- Warm-start generates temporary model only when requested
+- Base models remain universal and modular
+- No UI modifications required
+
+---
+
+### Stage 8: Integer/Float Alignment & Warm-Start Flow  
+**File**: [STAGE_8_Integer_Float_Warmstart_Alignment.md](STAGE_8_Integer_Float_Warmstart_Alignment.md) (English)
+
+Final alignment documentation. Removes lexicographic tie-breaker, ensures objective equivalence, and describes reproducible warm-start workflow.
+
+**Key Changes**:
+- Removed tie-breaker from integer model objective
+- Warm-start artifacts materialized only when requested
+- Validation on Battery-Decided20_0, Battery-Decided20_5, Battery-Decided20_10
+- Complete reproducibility achieved
+
+---
+
+## Quick Navigation
+
+| Stage | Focus | Status | File |
+|-------|-------|--------|------|
+| 1 | Converter/Runner correction | ✓ Complete | [S1](STAGE_1_Converter_Runner_Correction.md) |
+| 2 | Battery-Fixed generation | ✓ Complete | [S2](STAGE_2_Battery_Fixed_Java_Aligned.md) |
+| 4-5 | Format analysis & parity | ✓ Detailed | [S4](STAGE_4_Integer_Decimal_Format.md), [S5](STAGE_5A_Converter_44_Mismatch_Analysis.md) |
+| 6 | Runner UI & targeting | ✓ Complete | [S6](STAGE_6_Integer_Float_Battery_Decided.md) |
+| 6.2 | Battery-Decided alignment | ✓ Documented | [S6.2](STAGE_6.2_Battery_Decided_Alignment.md) |
+| 7 | Integer model alignment | ✓ Analyzed | [S7](STAGE_7_Integer_Float_Alignment.md) |
+| 7.2 | Warm-start integration | ✓ Implemented | [S7.2](STAGE_7.2_Integer_CPLEX_Warmstart.md) |
+| 7.3 | Universal runner | ✓ Complete | [S7.3](STAGE_7.3_Universal_Runner_Warmstart.md) |
+| 8 | Final alignment | ✓ Complete | [S8](STAGE_8_Integer_Float_Warmstart_Alignment.md) |
+
+---
+
+## Key Technical Achievements
+
+1. **Java Compatibility**: New `java` conversion mode emits integer energy units and seconds-based timing matching JITS2022 baseline
+2. **Data-Driven Bounds**: MiniZinc models use instance data to compute bounds instead of hardcoded limits
+3. **RCLP Sign Fix**: Corrected temporal recursion constraint (addition instead of subtraction)
+4. **Automatic Precision Detection**: Runner auto-selects model variant (float/integer) based on DZN format
+5. **Optional Warm-Start**: Universal runner supporting optional warm-start without mandatory dependencies
+6. **Complete Path Reorganization**: 50+ files updated to modern structure (core/, experiments/, scripts/)
+
+---
+
+## Testing & Validation
+
+All stages include:
+- Concrete test case examples (primarily Cork-1-line Battery-Decided variants)
+- Step-by-step reproduction instructions
+- Expected outputs and diagnostic procedures
+- Script references for automation
+
+See individual stage files for detailed validation procedures and reproduction commands.
+
+---
+
+## Repository Context
+
+- **Branch**: feature/converter-format
+- **Target Merge**: main (when validation complete)
+- **Related PR**: Documents complete v2.1.0 feature development
+- **Version Update**: 2.0.0 → 2.1.0
+
+---
+
+## Document Status
+
+- All files translated to English ✓
+- All stages documented with concrete examples ✓
+- Reproducibility instructions provided ✓
+- Clear navigation and linking ✓
+
+---
+
+**Last Updated**: May 14, 2026
 
 ## Root Cause Analysis
 

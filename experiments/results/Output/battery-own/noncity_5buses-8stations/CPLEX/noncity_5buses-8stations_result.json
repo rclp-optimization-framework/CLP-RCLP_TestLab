@@ -1,0 +1,19 @@
+{
+  "solver": "CPLEX",
+  "execution_time_seconds": 0.639,
+  "num_buses": 5,
+  "num_stations": 8,
+  "charged_stations": 3,
+  "charging_locations": [
+    1,
+    1,
+    0,
+    0,
+    0,
+    1,
+    0,
+    0
+  ],
+  "time_deviation_minutes": 175.0,
+  "timestamp": "2026-05-17T20:25:19.846252"
+}
