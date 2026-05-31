@@ -124,6 +124,7 @@ class ResultHandler:
             "num_stations": result.get('num_stations', 0),
             "charged_stations": result.get('charged_stations', 0),
             "charging_locations": result.get('charging_locations', []),
+            "charged_index": result.get('charged_index', []),
             "time_deviation_minutes": deviation_minutes,
             "timestamp": datetime.now().isoformat()
         }
@@ -137,11 +138,12 @@ class ResultHandler:
         num_stations = result.get('num_stations', 0)
         charged = result.get('charged_stations', 0)
         locations = result.get('charging_locations', [])
+        charged_idx = result.get('charged_index', [])
         deviation = self._time_deviation_minutes(result)
         exec_time = result.get('execution_time', 0)
 
-        # Format charging locations as binary array
         locations_str = "[" + ",".join(str(x) for x in locations) + "]"
+        charged_idx_str = "[" + ",".join(str(x) for x in charged_idx) + "]"
 
         lines = [
             "=" * 70,
@@ -156,6 +158,7 @@ class ResultHandler:
             f"Number of Stations:     {num_stations}",
             f"Charged Stations:       {charged}",
             f"Charging Locations:     {locations_str}",
+            f"Charged Index:          {charged_idx_str}",
             f"Time Deviation:         {deviation} minutes",
             "",
             "=" * 70

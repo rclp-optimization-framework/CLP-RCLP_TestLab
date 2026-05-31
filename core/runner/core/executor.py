@@ -189,7 +189,6 @@ class MiniZincExecutor:
         """
         result = {}
 
-        # Extract num_buses and num_stations from DZN file
         try:
             with open(dzn_path, 'r', encoding='utf-8') as f:
                 content = f.read()
@@ -204,18 +203,16 @@ class MiniZincExecutor:
         except Exception:
             return None
 
-        # Extract from solution output (MiniZinc outputs in Spanish)
         solution_text = "\n".join(lines)
 
-        # Look for "Estaciones instaladas: [...]" (Spanish for charging locations)
         estaciones_match = re.search(r'Estaciones instaladas:\s*\[(.*?)\]', solution_text, re.DOTALL)
         if estaciones_match:
             locations_str = estaciones_match.group(1)
             try:
-                # Parse the array
                 charging_locs = [int(x.strip()) for x in locations_str.split(',') if x.strip()]
                 result['charging_locations'] = charging_locs
                 result['charged_stations'] = sum(charging_locs)
+                result['charged_index'] = [i for i, val in enumerate(charging_locs) if val == 1]
             except ValueError:
                 logger.warning(f"Failed to parse charging locations: {locations_str}")
                 return None
@@ -223,7 +220,6 @@ class MiniZincExecutor:
             logger.warning("Could not find 'Estaciones instaladas' in output")
             return None
 
-        # Look for "Desviacion total: N" (Spanish for time deviation)
         desviacion_match = re.search(r'Desviacion total:\s*(-?\d+(?:\.\d+)?)', solution_text)
         if desviacion_match:
             result['time_deviation'] = float(desviacion_match.group(1))
