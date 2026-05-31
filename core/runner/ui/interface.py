@@ -68,6 +68,7 @@ class RunnerInterface(tk.Frame):
         self.executor: Optional[MiniZincExecutor] = None
         self.result_handler: Optional[ResultHandler] = None
         self.execution_thread: Optional[threading.Thread] = None
+        self.stop_event = threading.Event()
         self.is_running = False
 
         # Find project root for file operations
@@ -589,8 +590,10 @@ class RunnerInterface(tk.Frame):
         self.execution_thread.start()
 
     def _execute_test(self, directory: str, instance: str, model: str, precision: str, solver_name: str) -> None:
-        """Execute test in background thread."""
+        """Execute test in background thread with proper stop signal handling."""
         try:
+            self.stop_event.clear()
+
             # Get solver type from display name
             solver_type = SolverManager.get_solver_by_display_name(solver_name)
             if not solver_type:
@@ -609,7 +612,7 @@ class RunnerInterface(tk.Frame):
                 return
 
             # Run without a hard execution time limit from the UI.
-            executor = MiniZincExecutor(str(model_path), timeout_seconds=None)
+            self.executor = MiniZincExecutor(str(model_path), timeout_seconds=None)
 
             data_path = Path(self.project_root) / "experiments" / "instances" / directory
             instance_path = data_path / f"{instance}.dzn"
@@ -622,7 +625,13 @@ class RunnerInterface(tk.Frame):
             self._log(f"Executing: {model} [{precision}] ({solver_name}) on {instance}", "key")
 
             # execute() now returns tuple: (success: bool, result: Optional[Dict], execution_time: Optional[float])
-            success, result_dict, exec_time = executor.execute(str(instance_path), solver_type)
+            success, result_dict, exec_time = self.executor.execute(str(instance_path), solver_type)
+
+            # Check if stop was requested during execution
+            if self.stop_event.is_set():
+                self._log("Execution stopped by user", "warning")
+                self.status_indicator.set_status("idle", "Ready")
+                return
 
             if success and result_dict:
                 self._log(f"Execution completed successfully in {exec_time:.3f}s", "success")
@@ -664,15 +673,23 @@ class RunnerInterface(tk.Frame):
             self.run_btn.set_disabled(False)
             self.stop_btn.set_disabled(True)
             self.status_indicator.set_status("idle", "Ready")
+            self.executor = None
 
     def _stop_execution(self) -> None:
-        """Stop the currently running test execution."""
-        if self.is_running:
-            self._log("Execution stopped by user", "warning")
-            self.is_running = False
-            self.run_btn.set_disabled(False)
-            self.stop_btn.set_disabled(True)
-            self.status_indicator.set_status("idle", "Ready")
+        """Stop the currently running test execution by terminating subprocess."""
+        if not self.is_running:
+            return
+
+        self._log("Stopping execution...", "warning")
+        self.stop_event.set()
+
+        if self.executor:
+            self.executor.terminate()
+
+        self.is_running = False
+        self.run_btn.set_disabled(False)
+        self.stop_btn.set_disabled(True)
+        self.status_indicator.set_status("idle", "Ready")
 
     def _show_solver_info(self, event=None) -> None:
         """Display solver information in modal dialog."""
