@@ -239,7 +239,25 @@ class RunnerInterface(tk.Frame):
         if dirs:
             self.dir_combo.current(0)
         self.dir_combo.pack(fill=tk.X, padx=12, pady=(0, 5))
+        self.dir_combo.bind("<<ComboboxSelected>>", lambda _: self._update_subdirectories())
         Tooltip(self.dir_combo, "Select test dataset directory", self.theme_dict)
+
+        Divider(card, self.theme_dict).pack(fill=tk.X, padx=5, pady=5)
+
+        # Subdirectory selection (for nested battery structures)
+        SectionLabel(card, "Subdirectory", self.theme_dict).pack(anchor="w", padx=12, pady=(0, 6))
+        self.subdir_var = tk.StringVar(value="Root")
+        self.subdir_combo = ttk.Combobox(
+            card,
+            textvariable=self.subdir_var,
+            values=["Root"],
+            state="readonly",
+            style="Dark.TCombobox",
+        )
+        self.subdir_combo.current(0)
+        self.subdir_combo.pack(fill=tk.X, padx=12, pady=(0, 5))
+        self.subdir_combo.bind("<<ComboboxSelected>>", lambda _: self._refresh_instances())
+        Tooltip(self.subdir_combo, "Select subdirectory within battery (if available)", self.theme_dict)
 
         Divider(card, self.theme_dict).pack(fill=tk.X, padx=5, pady=5)
 
@@ -514,19 +532,24 @@ class RunnerInterface(tk.Frame):
         self._apply_ttk_theme()
     
     def _refresh_instances(self) -> None:
-        """Refresh the list of available test instances."""
+        """Refresh the list of available test instances from selected battery and subdirectory."""
         directory = self.dir_var.get()
         if not directory:
             return
 
+        subdir = self.subdir_var.get()
         data_path = Path(self.project_root) / "experiments" / "instances" / directory
+
+        if subdir and subdir != "Root":
+            data_path = data_path / subdir
+
         instances = sorted([f.stem for f in data_path.glob("*.dzn")]) if data_path.exists() else []
 
         self.instance_combo["values"] = instances
         if instances:
             self.instance_combo.current(0)
 
-        self._log(f"Found {len(instances)} instances in {directory}", "info")
+        self._log(f"Found {len(instances)} instances in {directory}/{subdir if subdir != 'Root' else ''}", "info")
 
     def _load_available_batteries(self) -> list:
         """Load available battery directories from experiments/instances."""
@@ -545,6 +568,37 @@ class RunnerInterface(tk.Frame):
 
         return batteries
 
+    def _get_battery_subdirectories(self, battery_name: str) -> list:
+        """Return list of subdirectories in battery, or empty if none."""
+        battery_path = Path(self.project_root) / "experiments" / "instances" / battery_name
+        if not battery_path.exists():
+            return []
+
+        subdirs = sorted([
+            d.name for d in battery_path.iterdir()
+            if d.is_dir() and not d.name.startswith('.')
+        ])
+
+        return subdirs
+
+    def _update_subdirectories(self) -> None:
+        """Update subdirectory dropdown when battery selection changes."""
+        battery_name = self.dir_var.get()
+        if not battery_name:
+            self.subdir_combo["values"] = ["Root"]
+            self.subdir_var.set("Root")
+            return
+
+        subdirs = self._get_battery_subdirectories(battery_name)
+        if subdirs:
+            self.subdir_combo["values"] = ["Root"] + subdirs
+        else:
+            self.subdir_combo["values"] = ["Root"]
+
+        self.subdir_var.set("Root")
+        self.subdir_combo.current(0)
+        self._refresh_instances()
+
     def _log(self, message: str, tag: str = "muted") -> None:
         """Add a message to the output log."""
         self.log_text.insert(tk.END, message + "\n", tag)
@@ -560,6 +614,7 @@ class RunnerInterface(tk.Frame):
         model = self.model_var.get()
         precision = self.precision_var.get()
         directory = self.dir_var.get()
+        subdir = self.subdir_var.get()
         solver_name = self.solver_var.get()
 
         if not instance or not model or not precision or not directory:
@@ -576,7 +631,8 @@ class RunnerInterface(tk.Frame):
             )
             return
 
-        self._log(f"Starting execution: {instance} ({model}, {precision}) with {solver_name}", "info")
+        subdir_str = f" ({subdir})" if subdir and subdir != "Root" else ""
+        self._log(f"Starting execution: {instance} ({model}, {precision}) with {solver_name}{subdir_str}", "info")
         self.status_indicator.set_status("running", "Running...")
         self.run_btn.set_disabled(True)
         self.stop_btn.set_disabled(False)
@@ -584,12 +640,12 @@ class RunnerInterface(tk.Frame):
 
         self.execution_thread = threading.Thread(
             target=self._execute_test,
-            args=(directory, instance, model, precision, solver_name),
+            args=(directory, instance, model, precision, solver_name, subdir if subdir != "Root" else None),
             daemon=True
         )
         self.execution_thread.start()
 
-    def _execute_test(self, directory: str, instance: str, model: str, precision: str, solver_name: str) -> None:
+    def _execute_test(self, directory: str, instance: str, model: str, precision: str, solver_name: str, subdirectory: Optional[str] = None) -> None:
         """Execute test in background thread with proper stop signal handling."""
         try:
             self.stop_event.clear()
@@ -615,7 +671,10 @@ class RunnerInterface(tk.Frame):
             self.executor = MiniZincExecutor(str(model_path), timeout_seconds=None)
 
             data_path = Path(self.project_root) / "experiments" / "instances" / directory
-            instance_path = data_path / f"{instance}.dzn"
+            if subdirectory:
+                instance_path = data_path / subdirectory / f"{instance}.dzn"
+            else:
+                instance_path = data_path / f"{instance}.dzn"
 
             if not instance_path.exists():
                 self._log(f"Instance not found: {instance_path}", "error")
@@ -639,8 +698,14 @@ class RunnerInterface(tk.Frame):
 
                 # Save results organized by test name and solver
                 test_name = instance.replace('.dzn', '')
+
+                # Build output directory including subdirectory structure
+                output_base = Path(self.project_root) / "experiments" / "results" / "output" / directory
+                if subdirectory:
+                    output_base = output_base / subdirectory
+
                 handler = ResultHandler(
-                    str(Path(self.project_root) / "experiments" / "results" / "output" / directory),
+                    str(output_base),
                     test_name=test_name,
                     model_type=precision
                 )
