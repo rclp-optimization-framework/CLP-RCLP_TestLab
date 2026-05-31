@@ -641,7 +641,8 @@ class RunnerInterface(tk.Frame):
                 test_name = instance.replace('.dzn', '')
                 handler = ResultHandler(
                     str(Path(self.project_root) / "experiments" / "results" / "output" / directory),
-                    test_name=test_name
+                    test_name=test_name,
+                    model_type=precision
                 )
                 success_save, json_path, txt_path = handler.save_results(instance, result_dict, SolverManager.get_display_name(solver_type))
 
