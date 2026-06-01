@@ -69,6 +69,16 @@ Completed on: May 31, 2026 | Branch: feature/runner-pro
 - **Result:** Complete documentation for end users and developers
 - **Commit:** `0e744eb`
 
+### Phase 8 - Path & UI
+- [x] Path ordering correct: model_type before subdirectory
+- [x] Batch mode buttons visible and functional
+- [x] Instance field enable/disable works
+
+### Phase 9 - Stop Responsiveness
+- [x] Stop button interrupts immediately
+- [x] No blocking on stop signal
+- [x] UI layout consistent
+
 ---
 
 ## Git Commits Summary

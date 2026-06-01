@@ -1,6 +1,6 @@
 # CLP-RCLP TestLab Environment
 
-[![Version](https://img.shields.io/badge/version-2.1.0-brightgreen?style=flat-square)](.)
+[![Version](https://img.shields.io/badge/version-2.2.0-brightgreen?style=flat-square)](.)
 [![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](.)
 [![Python](https://img.shields.io/badge/python-3.8+-yellow?style=flat-square)](.)
 [![MiniZinc](https://img.shields.io/badge/minizinc-2.6+-ff69b4?style=flat-square)](.)
@@ -11,17 +11,17 @@ Professional lab environment for research and optimization of the **Charging Loc
 
 This framework provides a complete toolkit for:
 
-- **System Center**: Unified GUI for accessing all tools (v2.1.0)
+- **System Center**: Unified GUI for accessing all tools (v2.2.0)
 - **Mathematical Models**: CLP and RCLP formulations in MiniZinc
 - **Instance Generation**: Create synthetic and realistic test datasets
 - **Data Conversion**: Transform JSON to constraint programming format
-- **Optimization Testing**: Execute and compare multiple solvers
+- **Optimization Testing**: Execute and compare multiple solvers with batch capabilities
 - **Multi-Solver Support**: Chuffed, Gecode, COIN-BC, OR-Tools, CPLEX, Gurobi
 - **Complete Documentation**: Comprehensive guides and technical references
 
 ## Key Features
 
-### 🎯 System Center GUI (v2.1.0)
+### 🎯 System Center GUI (v2.2.0)
 
 - Unified interface to all tools
 - Dark/Light theme with persistent preferences
@@ -30,11 +30,22 @@ This framework provides a complete toolkit for:
 - Direct access to documentation and GitHub
 - Resizable window with responsive layout
 
-### 🔧 Three Core Tools
+### ⚡ Enhanced Test Runner (v2.2.0)
 
-1. **Data Converter** - JSON to MiniZinc (DZN) format, with normalized and Java-compatible output modes
-2. **Instance Generator** - Create test instances with parameters
-3. **Test Runner** - Execute optimization and compare solvers
+**New in v2.2.0:**
+- **Functional Stop Button** - Properly terminate execution within 2 seconds
+- **Batch Execution** - Run all instances in battery sequentially with one click
+- **Resume Capability** - Continue interrupted batches from any instance
+- **Model-Aware Results** - Automatic organization by float/integer precision
+- **Subdirectory Navigation** - Access nested battery structures (e.g., cork-1-line)
+- **Charged Station Indices** - Results include actual station indices, not just binary array
+
+**Core Features:**
+- 6+ solver backends with parallel execution
+- Incremental result saving during batch
+- Automatic diagnostic generation on errors
+- Progress tracking and logging
+- Execution mode selection (Single/All/Continue)
 
 ### 📊 Mathematical Models
 
@@ -221,6 +232,19 @@ Complete documentation is available in the `docs/` directory:
 - Professional documentation
 - Complete project restructuring
 - Theme persistence across sessions
+
+### v2.2.0 (Current)
+
+**Runner Pro - Enhanced Test Execution and Battery Management**
+
+- ✅ **Functional Stop Button** - Proper subprocess termination with 2-second response time
+- ✅ **Batch Execution** - Run all instances sequentially with progress tracking
+- ✅ **Resume Capability** - Continue interrupted batches from any instance
+- ✅ **Model-Aware Results** - Automatic float/integer separation in results
+- ✅ **Subdirectory Navigation** - Access nested battery structures
+- ✅ **Charged Station Indices** - Results include station indices, not just binary array
+- ✅ **Comprehensive Documentation** - CHANGELOG, IMPLEMENTATION, CORE_MAP, MIGRATION_GUIDE
+- ✅ **Core Module Documentation** - All core/ modules documented in English
 
 ### v1.4.0
 
