@@ -267,7 +267,33 @@ class RunnerInterface(tk.Frame):
 
         Divider(card, self.theme_dict).pack(fill=tk.X, padx=5, pady=3)
 
-        # Test instance selection
+        # Execution mode selection
+        SectionLabel(card, "Execution Mode", self.theme_dict).pack(anchor="w", padx=12, pady=(6, 6))
+        mode_frame = tk.Frame(card, bg=self.theme_dict["bg_elevated"])
+        mode_frame.pack(fill=tk.X, padx=12, pady=(0, 5))
+
+        self.execution_mode = tk.StringVar(value="single")
+        for label, value in [("1 Instance", "single"), ("All", "all"), ("Continue", "continue")]:
+            rb = tk.Radiobutton(
+                mode_frame,
+                text=label,
+                variable=self.execution_mode,
+                value=value,
+                command=lambda v=value: self._on_execution_mode_change(v),
+                bg=self.theme_dict["bg_elevated"],
+                fg=self.theme_dict["text_primary"],
+                selectcolor=self.theme_dict["accent_primary"],
+                activebackground=self.theme_dict["bg_hover"],
+            )
+            rb.pack(side=tk.LEFT, padx=8)
+
+        Tooltip(
+            mode_frame,
+            "1 Instance: Run one. All: Run all sequentially. Continue: Resume from selected index.",
+            self.theme_dict,
+        )
+
+        Divider(card, self.theme_dict).pack(fill=tk.X, padx=5, pady=3)
         SectionLabel(card, "Instance", self.theme_dict).pack(anchor="w", padx=12, pady=(0, 6))
         inst_frame = tk.Frame(card, bg=self.theme_dict["bg_elevated"])
         inst_frame.pack(fill=tk.X, padx=12, pady=(0, 5))
@@ -370,34 +396,9 @@ class RunnerInterface(tk.Frame):
 
         Divider(card, self.theme_dict).pack(fill=tk.X, padx=12, pady=3)
 
-        # Execution mode selection (prominent buttons)
-        SectionLabel(card, "Execution Mode", self.theme_dict).pack(anchor="w", padx=12, pady=(12, 6))
-        mode_btn_frame = tk.Frame(card, bg=self.theme_dict["bg_elevated"])
-        mode_btn_frame.pack(fill=tk.X, padx=12, pady=(0, 12))
-
-        self.execution_mode = tk.StringVar(value="single")
-        self.mode_buttons = {}
-    
-        for label, value in [("1 Instance", "single"), ("All", "all"), ("Continue", "continue")]:
-            btn = FlatButton(
-                mode_btn_frame,
-                label,
-                command=lambda v=value: self._on_execution_mode_change(v),
-                theme=self.theme_dict,
-                accent=(value == "single")
-            )
-            btn.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=4)
-            self.mode_buttons[value] = btn
-
-        Tooltip(
-            mode_btn_frame,
-            "1 Instance: Run one. All: Run all sequentially. Continue: Resume from selected index.",
-            self.theme_dict,
-        )
-
         # Action buttons
         btn_frame = tk.Frame(card, bg=self.theme_dict["bg_elevated"])
-        btn_frame.pack(fill=tk.X, padx=12, pady=(0, 12))
+        btn_frame.pack(fill=tk.X, padx=12, pady=(12, 12))
 
         self.run_btn = FlatButton(
             btn_frame,
@@ -779,7 +780,7 @@ class RunnerInterface(tk.Frame):
                 return
 
             # Run without a hard execution time limit from the UI.
-            self.executor = MiniZincExecutor(str(model_path), timeout_seconds=None)
+            self.executor = MiniZincExecutor(str(model_path), timeout_seconds=None, stop_event=self.stop_event)
 
             data_path = Path(self.project_root) / "experiments" / "instances" / directory
             if subdirectory:

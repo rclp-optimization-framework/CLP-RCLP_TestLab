@@ -15,6 +15,7 @@ from typing import Dict, Tuple, Optional
 import logging
 import time
 import signal
+import threading
 
 from core.shared.project_paths import ProjectPaths
 from .solvers import SolverType, SolverManager
@@ -27,17 +28,19 @@ DEFAULT_CPLEX_OPTIONS = {}
 class MiniZincExecutor:
     """Execute MiniZinc models with multiple solver support."""
 
-    def __init__(self, model_path: str, timeout_seconds: Optional[int] = 300):
+    def __init__(self, model_path: str, timeout_seconds: Optional[int] = 300, stop_event: Optional[threading.Event] = None):
         """
         Initialize executor.
 
         Args:
             model_path: Path to .mzn model file
             timeout_seconds: Execution timeout in seconds, or None/<=0 for no timeout
+            stop_event: Threading event to signal stop request from UI
         """
         self.model_path = Path(model_path)
         self.timeout_seconds = timeout_seconds
         self.process: Optional[subprocess.Popen] = None
+        self.stop_event = stop_event
 
         if not self.model_path.exists():
             raise FileNotFoundError(f"Model not found: {model_path}")
@@ -91,14 +94,35 @@ class MiniZincExecutor:
                 text=True
             )
 
-            try:
-                stdout, stderr = self.process.communicate(timeout=timeout_sec)
-                execution_time = time.time() - start_time
-                returncode = self.process.returncode
-            except subprocess.TimeoutExpired:
-                self.process.kill()
-                logger.warning(f"MiniZinc execution timed out with {solver_name}")
-                return False, None, self.timeout_seconds
+            # Poll with stop_event checking instead of blocking communicate()
+            stdout_lines = []
+            stderr_lines = []
+            deadline = time.time() + timeout_sec if timeout_sec else None
+            poll_interval = 0.1  # Check stop_event every 100ms
+
+            while True:
+                # Check for stop request
+                if self.stop_event and self.stop_event.is_set():
+                    logger.info("Stop event detected, terminating process")
+                    self.terminate()
+                    return False, None, None
+
+                # Check if process finished
+                returncode = self.process.poll()
+                if returncode is not None:
+                    break
+
+                # Check timeout
+                if deadline and time.time() > deadline:
+                    self.process.kill()
+                    logger.warning(f"MiniZinc execution timed out with {solver_name}")
+                    return False, None, self.timeout_seconds
+
+                time.sleep(poll_interval)
+
+            # Process finished, read remaining output
+            execution_time = time.time() - start_time
+            stdout, stderr = self.process.communicate()  # Non-blocking at this point
 
             if returncode == 0:
                 success, parsed_result = self._parse_solution(stdout, dzn_paths[0], solver)
