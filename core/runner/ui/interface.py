@@ -150,7 +150,7 @@ class RunnerInterface(tk.Frame):
 
         # Left side: Back button + Title with accent bar
         left = tk.Frame(header, bg=self.theme_dict["bg_surface"])
-        left.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=20, pady=15)
+        left.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=20, pady=10)
 
         # Back button
         back_btn = tk.Label(
@@ -180,7 +180,7 @@ class RunnerInterface(tk.Frame):
 
         # Right side: Status and theme toggle
         right = tk.Frame(header, bg=self.theme_dict["bg_surface"])
-        right.pack(side=tk.RIGHT, fill=tk.Y, padx=20, pady=10)
+        right.pack(side=tk.RIGHT, fill=tk.Y, padx=20, pady=0)
 
         # StatusIndicator (modular component)
         self.status_indicator = StatusIndicator(right, "Ready", self.theme_dict)
@@ -229,7 +229,7 @@ class RunnerInterface(tk.Frame):
             relief=tk.FLAT,
             bd=0,
         )
-        card.pack(fill=tk.BOTH, expand=True, padx=0, pady=12)
+        card.pack(fill=tk.BOTH, expand=True, padx=0, pady=4)
 
         # Directory selection
         SectionLabel(card, "Directory", self.theme_dict).pack(anchor="w", padx=12, pady=(14, 6))
@@ -244,11 +244,11 @@ class RunnerInterface(tk.Frame):
         )
         if dirs:
             self.dir_combo.current(0)
-        self.dir_combo.pack(fill=tk.X, padx=12, pady=(0, 5))
+        self.dir_combo.pack(fill=tk.X, padx=12, pady=(0, 0))
         self.dir_combo.bind("<<ComboboxSelected>>", lambda _: self._update_subdirectories())
         Tooltip(self.dir_combo, "Select test dataset directory", self.theme_dict)
 
-        Divider(card, self.theme_dict).pack(fill=tk.X, padx=5, pady=5)
+        Divider(card, self.theme_dict).pack(fill=tk.X, padx=5, pady=0)
 
         # Subdirectory selection (for nested battery structures)
         SectionLabel(card, "Subdirectory", self.theme_dict).pack(anchor="w", padx=12, pady=(0, 6))
@@ -261,11 +261,11 @@ class RunnerInterface(tk.Frame):
             style="Dark.TCombobox",
         )
         self.subdir_combo.current(0)
-        self.subdir_combo.pack(fill=tk.X, padx=12, pady=(0, 5))
+        self.subdir_combo.pack(fill=tk.X, padx=12, pady=(0, 0))
         self.subdir_combo.bind("<<ComboboxSelected>>", lambda _: self._refresh_instances())
         Tooltip(self.subdir_combo, "Select subdirectory within battery (if available)", self.theme_dict)
 
-        Divider(card, self.theme_dict).pack(fill=tk.X, padx=5, pady=5)
+        Divider(card, self.theme_dict).pack(fill=tk.X, padx=5, pady=3)
 
         # Test instance selection
         SectionLabel(card, "Instance", self.theme_dict).pack(anchor="w", padx=12, pady=(0, 6))
@@ -288,7 +288,7 @@ class RunnerInterface(tk.Frame):
         refresh_btn.pack(side=tk.LEFT, padx=(6, 0))
         Tooltip(refresh_btn, "Reload list of available instances", self.theme_dict)
 
-        Divider(card, self.theme_dict).pack(fill=tk.X, padx=12, pady=5)
+        Divider(card, self.theme_dict).pack(fill=tk.X, padx=12, pady=0)
 
         # Solver selection
         SectionLabel(card, "Solver", self.theme_dict).pack(anchor="w", padx=12, pady=(0, 6))
@@ -323,7 +323,7 @@ class RunnerInterface(tk.Frame):
         info_btn.bind("<Button-1>", self._show_solver_info)
         Tooltip(info_btn, "Show solver information and capabilities", self.theme_dict)
 
-        Divider(card, self.theme_dict).pack(fill=tk.X, padx=12, pady=12)
+        Divider(card, self.theme_dict).pack(fill=tk.X, padx=12, pady=3)
         self.model_var = tk.StringVar(value="CLP")
 
         model_frame = tk.Frame(card, bg=self.theme_dict["bg_elevated"])
@@ -342,7 +342,7 @@ class RunnerInterface(tk.Frame):
             )
             rb.pack(side=tk.LEFT, padx=8)
 
-        Divider(card, self.theme_dict).pack(fill=tk.X, padx=12, pady=5)
+        Divider(card, self.theme_dict).pack(fill=tk.X, padx=12, pady=3)
 
         SectionLabel(card, "Number Type", self.theme_dict).pack(anchor="w", padx=12, pady=(0, 6))
         precision_frame = tk.Frame(card, bg=self.theme_dict["bg_elevated"])
@@ -368,36 +368,36 @@ class RunnerInterface(tk.Frame):
             self.theme_dict,
         )
 
-        Divider(card, self.theme_dict).pack(fill=tk.X, padx=12, pady=5)
+        Divider(card, self.theme_dict).pack(fill=tk.X, padx=12, pady=3)
+
+        # Execution mode selection (prominent buttons)
+        SectionLabel(card, "Execution Mode", self.theme_dict).pack(anchor="w", padx=12, pady=(12, 6))
+        mode_btn_frame = tk.Frame(card, bg=self.theme_dict["bg_elevated"])
+        mode_btn_frame.pack(fill=tk.X, padx=12, pady=(0, 12))
+
+        self.execution_mode = tk.StringVar(value="single")
+        self.mode_buttons = {}
+    
+        for label, value in [("1 Instance", "single"), ("All", "all"), ("Continue", "continue")]:
+            btn = FlatButton(
+                mode_btn_frame,
+                label,
+                command=lambda v=value: self._on_execution_mode_change(v),
+                theme=self.theme_dict,
+                accent=(value == "single")
+            )
+            btn.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=4)
+            self.mode_buttons[value] = btn
+
+        Tooltip(
+            mode_btn_frame,
+            "1 Instance: Run one. All: Run all sequentially. Continue: Resume from selected index.",
+            self.theme_dict,
+        )
 
         # Action buttons
         btn_frame = tk.Frame(card, bg=self.theme_dict["bg_elevated"])
         btn_frame.pack(fill=tk.X, padx=12, pady=(0, 12))
-
-        # Execution mode selection
-        SectionLabel(card, "Execution Mode", self.theme_dict).pack(anchor="w", padx=12, pady=(0, 6))
-        mode_frame = tk.Frame(card, bg=self.theme_dict["bg_elevated"])
-        mode_frame.pack(fill=tk.X, padx=12, pady=(0, 8))
-
-        self.execution_mode = tk.StringVar(value="single")
-        for label, value in [("Single", "single"), ("All", "all"), ("Continue", "continue")]:
-            rb = tk.Radiobutton(
-                mode_frame,
-                text=label,
-                variable=self.execution_mode,
-                value=value,
-                bg=self.theme_dict["bg_elevated"],
-                fg=self.theme_dict["text_primary"],
-                selectcolor=self.theme_dict["accent_primary"],
-                activebackground=self.theme_dict["bg_hover"],
-            )
-            rb.pack(side=tk.LEFT, padx=8)
-
-        Tooltip(
-            mode_frame,
-            "Single: Run one instance. All: Run all instances. Continue: Resume from selected index.",
-            self.theme_dict,
-        )
 
         self.run_btn = FlatButton(
             btn_frame,
@@ -454,7 +454,7 @@ class RunnerInterface(tk.Frame):
 
         # Log display
         wrap = tk.Frame(right_panel, bg=self.theme_dict["bg_base"])
-        wrap.pack(fill=tk.BOTH, expand=True, padx=12, pady=12)
+        wrap.pack(fill=tk.BOTH, expand=True, padx=12, pady=3)
 
         self.log_text = tk.Text(
             wrap,
@@ -630,6 +630,25 @@ class RunnerInterface(tk.Frame):
         self.subdir_combo.current(0)
         self._refresh_instances()
 
+    def _on_execution_mode_change(self, mode: str) -> None:
+        """Handle execution mode button changes and update UI state."""
+        self.execution_mode.set(mode)
+
+        # Update button appearances
+        for btn_mode, btn in self.mode_buttons.items():
+            btn.config(relief=tk.SUNKEN if btn_mode == mode else tk.FLAT)
+
+        # Update instance combobox enabled state
+        if mode == "single":
+            self.instance_combo.config(state="readonly")
+            self.instance_combo.pack_info()  # Show if hidden
+        elif mode == "all":
+            self.instance_combo.config(state="disabled")
+            self.instance_combo.pack_info()  # Show but disabled
+        elif mode == "continue":
+            self.instance_combo.config(state="readonly")
+            self.instance_combo.pack_info()  # Show and enabled
+
     def _log(self, message: str, tag: str = "muted") -> None:
         """Add a message to the output log."""
         self.log_text.insert(tk.END, message + "\n", tag)
@@ -791,15 +810,14 @@ class RunnerInterface(tk.Frame):
                 # Save results organized by test name and solver
                 test_name = instance.replace('.dzn', '')
 
-                # Build output directory including subdirectory structure
+                # Build output directory - model_type comes BEFORE subdirectory
                 output_base = Path(self.project_root) / "experiments" / "results" / "output" / directory
-                if subdirectory:
-                    output_base = output_base / subdirectory
 
                 handler = ResultHandler(
                     str(output_base),
                     test_name=test_name,
-                    model_type=precision
+                    model_type=precision,
+                    subdirectory_path=subdirectory
                 )
                 success_save, json_path, txt_path = handler.save_results(instance, result_dict, SolverManager.get_display_name(solver_type))
 
@@ -906,13 +924,12 @@ class RunnerInterface(tk.Frame):
                     # Save results
                     test_name = instance.replace('.dzn', '')
                     output_base = Path(self.project_root) / "experiments" / "results" / "output" / directory
-                    if subdirectory:
-                        output_base = output_base / subdirectory
 
                     handler = ResultHandler(
                         str(output_base),
                         test_name=test_name,
-                        model_type=precision
+                        model_type=precision,
+                        subdirectory_path=subdirectory
                     )
                     handler.save_results(instance, result_dict, SolverManager.get_display_name(solver_type))
 
@@ -982,7 +999,7 @@ class RunnerInterface(tk.Frame):
 
         # Listbox with scrollbar
         frame = tk.Frame(dialog, bg=self.theme_dict["bg_base"])
-        frame.pack(fill=tk.BOTH, expand=True, padx=15, pady=(0, 15))
+        frame.pack(fill=tk.BOTH, expand=True, padx=15, pady=(0, 0))
 
         scrollbar = ttk.Scrollbar(frame, orient=tk.VERTICAL)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
@@ -1015,7 +1032,7 @@ class RunnerInterface(tk.Frame):
             dialog.destroy()
 
         btn_frame = tk.Frame(dialog, bg=self.theme_dict["bg_base"])
-        btn_frame.pack(fill=tk.X, padx=15, pady=(0, 15))
+        btn_frame.pack(fill=tk.X, padx=15, pady=(0, 0))
 
         ok_btn = FlatButton(btn_frame, "Continue", command=on_ok, theme=self.theme_dict, accent=True)
         ok_btn.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 8))
@@ -1081,7 +1098,7 @@ class RunnerInterface(tk.Frame):
 
         # Title and close button
         title_frame = tk.Frame(header, bg=self.theme_dict["bg_surface"])
-        title_frame.pack(fill=tk.BOTH, expand=True, padx=15, pady=10)
+        title_frame.pack(fill=tk.BOTH, expand=True, padx=15, pady=0)
 
         tk.Label(
             title_frame,
@@ -1104,7 +1121,7 @@ class RunnerInterface(tk.Frame):
 
         # Content scrollable area
         content_frame = tk.Frame(dialog, bg=self.theme_dict["bg_base"])
-        content_frame.pack(fill=tk.BOTH, expand=True, padx=15, pady=15)
+        content_frame.pack(fill=tk.BOTH, expand=True, padx=15, pady=0)
 
         # Description
         tk.Label(
@@ -1124,11 +1141,11 @@ class RunnerInterface(tk.Frame):
             relief=tk.FLAT,
             bd=0,
             padx=10,
-            pady=5,
+            pady=0,
         )
         desc_text.insert(tk.END, solver_info.description)
         desc_text.configure(state="disabled")
-        desc_text.pack(fill=tk.X, pady=(0, 12))
+        desc_text.pack(fill=tk.X, pady=(0, 0))
 
         # Strengths
         tk.Label(
@@ -1148,11 +1165,11 @@ class RunnerInterface(tk.Frame):
             relief=tk.FLAT,
             bd=0,
             padx=10,
-            pady=5,
+            pady=0,
         )
         strengths_text.insert(tk.END, "• " + "\n• ".join(solver_info.strengths))
         strengths_text.configure(state="disabled")
-        strengths_text.pack(fill=tk.X, pady=(0, 12))
+        strengths_text.pack(fill=tk.X, pady=(0, 0))
 
         # Use cases
         tk.Label(
@@ -1172,11 +1189,11 @@ class RunnerInterface(tk.Frame):
             relief=tk.FLAT,
             bd=0,
             padx=10,
-            pady=5,
+            pady=0,
         )
         use_text.insert(tk.END, "• " + "\n• ".join(solver_info.use_cases))
         use_text.configure(state="disabled")
-        use_text.pack(fill=tk.X, pady=(0, 12))
+        use_text.pack(fill=tk.X, pady=(0, 0))
 
         # Commercial badge
         if solver_info.commercial:
@@ -1190,7 +1207,7 @@ class RunnerInterface(tk.Frame):
                 fg=self.theme_dict["warning"],
                 bg=self.theme_dict["bg_elevated"],
                 padx=8,
-                pady=4,
+                pady=0,
                 relief=tk.FLAT,
                 bd=0,
             ).pack(side=tk.LEFT)

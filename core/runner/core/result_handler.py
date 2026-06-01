@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 class ResultHandler:
     """Handle result file generation and storage with model type, test-name and solver organization."""
 
-    def __init__(self, output_dir: str, test_name: str = "", model_type: Optional[str] = None):
+    def __init__(self, output_dir: str, test_name: str = "", model_type: Optional[str] = None, subdirectory_path: Optional[str] = None):
         """
         Initialize result handler.
 
@@ -28,17 +28,20 @@ class ResultHandler:
             output_dir: Base directory to save results
             test_name: Name of the test instance (optional, for organizing by test)
             model_type: Model type ("float" or "integer"), optional for backward compatibility
+            subdirectory_path: Optional subdirectory within battery (e.g., "cork-1-line")
         """
         self.output_dir = Path(output_dir)
         self.test_name = test_name
         self.model_type = model_type
+        self.subdirectory_path = subdirectory_path
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
     def save_results(self, filename: str, result: Dict, solver: str) -> Tuple[bool, str, str]:
         """
-        Save successful results in JSON and TXT formats, organized by model type, test name, and solver.
+        Save successful results in JSON and TXT formats, organized by model type, subdirectory, test name, and solver.
 
-        Structure with model_type: output_dir/float_or_integer/test_name/solver/
+        Structure with model_type and subdirectory: output_dir/float_or_integer/subdir/test_name/solver/
+        Structure with model_type only: output_dir/float_or_integer/test_name/solver/
         Structure without model_type: output_dir/test_name/solver/ (backward compatible)
 
         Args:
@@ -50,13 +53,18 @@ class ResultHandler:
             (success: bool, json_path: str, txt_path: str)
         """
         try:
-            if self.model_type:
-                result_dir = self.output_dir / self.model_type / self.test_name / solver
-            elif self.test_name:
-                result_dir = self.output_dir / self.test_name / solver
-            else:
-                result_dir = self.output_dir / solver
+            result_dir = self.output_dir
 
+            if self.model_type:
+                result_dir = result_dir / self.model_type
+
+            if self.subdirectory_path:
+                result_dir = result_dir / self.subdirectory_path
+
+            if self.test_name:
+                result_dir = result_dir / self.test_name
+
+            result_dir = result_dir / solver
             result_dir.mkdir(parents=True, exist_ok=True)
 
             # Save JSON
