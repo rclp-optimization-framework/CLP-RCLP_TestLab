@@ -14,6 +14,7 @@ Complete documentation for the CLP-RCLP optimization framework.
 
 - **[reference/USAGE_GUIDE.md](reference/USAGE_GUIDE.md)** - Detailed guide for each tool (GUI and CLI)
 - **[guides/TROUBLESHOOTING.md](guides/TROUBLESHOOTING.md)** - Solutions to common problems
+- **[guides/EXPLAINABLE_OPTIMIZATION_PLAN.md](guides/EXPLAINABLE_OPTIMIZATION_PLAN.md)** - Roadmap for explainable instance generation and variants
 - **[guides/](guides/)** - Additional user guides
 
 ### Technical Documentation

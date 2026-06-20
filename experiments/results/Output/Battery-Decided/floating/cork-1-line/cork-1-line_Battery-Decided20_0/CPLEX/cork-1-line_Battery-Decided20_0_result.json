@@ -1,6 +1,6 @@
 {
   "solver": "CPLEX",
-  "execution_time_seconds": 84.662,
+  "execution_time_seconds": 185.467,
   "num_buses": 4,
   "num_stations": 40,
   "charged_stations": 1,
@@ -50,5 +50,5 @@
     19
   ],
   "time_deviation_minutes": 447360.0,
-  "timestamp": "2026-05-31T20:45:21.989192"
+  "timestamp": "2026-06-01T08:14:09.287168"
 }

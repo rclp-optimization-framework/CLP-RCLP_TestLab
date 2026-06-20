@@ -3,8 +3,8 @@ CLP-RCLP Test Execution Result
 ======================================================================
 
 Solver:                 CPLEX
-Execution Time:         84.662 seconds
-Timestamp:              2026-05-31T20:45:21.990120
+Execution Time:         185.467 seconds
+Timestamp:              2026-06-01T08:14:09.290151
 
 Number of Buses:        4
 Number of Stations:     40
