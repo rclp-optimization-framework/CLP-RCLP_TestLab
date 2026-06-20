@@ -56,6 +56,9 @@ build/
 *.log
 test-results/
 
+# Local storaged results (optional - uncomment if you want to track these)
+external/jits2022/Code/data/results/
+
 # OS
 .DS_Store
 Thumbs.db

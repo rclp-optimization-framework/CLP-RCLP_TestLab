@@ -14,6 +14,8 @@ from pathlib import Path
 from typing import Dict, Tuple, Optional
 import logging
 import time
+import signal
+import threading
 
 from core.shared.project_paths import ProjectPaths
 from .solvers import SolverType, SolverManager
@@ -26,34 +28,37 @@ DEFAULT_CPLEX_OPTIONS = {}
 class MiniZincExecutor:
     """Execute MiniZinc models with multiple solver support."""
 
-    def __init__(self, model_path: str, timeout_seconds: Optional[int] = 300):
+    def __init__(self, model_path: str, timeout_seconds: Optional[int] = 300, stop_event: Optional[threading.Event] = None):
         """
         Initialize executor.
 
         Args:
             model_path: Path to .mzn model file
             timeout_seconds: Execution timeout in seconds, or None/<=0 for no timeout
+            stop_event: Threading event to signal stop request from UI
         """
         self.model_path = Path(model_path)
         self.timeout_seconds = timeout_seconds
+        self.process: Optional[subprocess.Popen] = None
+        self.stop_event = stop_event
 
         if not self.model_path.exists():
             raise FileNotFoundError(f"Model not found: {model_path}")
 
     def execute(self, dzn_file, solver: SolverType = SolverType.CHUFFED, solver_options: Optional[Dict] = None) -> Tuple[bool, Optional[Dict], Optional[float]]:
         """
-        Execute MiniZinc with given instance and solver.
+        Execute MiniZinc with given instance and solver using Popen for process control.
 
         Args:
             dzn_file: Path to .dzn instance file
             solver: Solver to use (default: chuffed)
+            solver_options: Optional solver-specific configuration
 
         Returns:
             (success: bool, result: dict or None, execution_time: float or None)
             Result contains: num_buses, num_stations, charged_stations,
                            charging_locations, time_deviation, solver, execution_time
         """
-        # Accept a single DZN path or a list of DZN paths
         if isinstance(dzn_file, (list, tuple)):
             dzn_paths = [Path(p) for p in dzn_file]
         else:
@@ -66,60 +71,97 @@ class MiniZincExecutor:
 
         try:
             solver_name = SolverManager.get_minizinc_solver_name(solver)
-
-            # Build base command and insert solver-specific options when provided
             cmd = ["minizinc", "--solver", solver_name]
 
-            # Global time limit (ms) for minizinc driver
             if self.timeout_seconds and self.timeout_seconds > 0:
                 cmd += ["--time-limit", str(self.timeout_seconds * 1000)]
 
-            # Solver specific options (supported for CPLEX wrapper in MiniZinc)
             if solver == SolverType.CPLEX:
                 effective_options = dict(solver_options or {})
                 if 'solver_time_limit' in effective_options and effective_options['solver_time_limit'] is not None:
-                    # solver_time_limit expects milliseconds
                     cmd += ["--solver-time-limit", str(int(effective_options['solver_time_limit']))]
 
-            # Append model and instance(s)
             cmd += [str(self.model_path)] + [str(p) for p in dzn_paths]
-
             logger.debug(f"Running: {' '.join(cmd)}")
 
-            # Measure execution time
             start_time = time.time()
+            timeout_sec = self.timeout_seconds + 10 if self.timeout_seconds and self.timeout_seconds > 0 else None
 
-            run_timeout = None
-            if self.timeout_seconds and self.timeout_seconds > 0:
-                run_timeout = self.timeout_seconds + 10
-
-            result = subprocess.run(
+            self.process = subprocess.Popen(
                 cmd,
-                capture_output=True,
-                text=True,
-                timeout=run_timeout
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True
             )
 
-            execution_time = time.time() - start_time
+            # Poll with stop_event checking instead of blocking communicate()
+            stdout_lines = []
+            stderr_lines = []
+            deadline = time.time() + timeout_sec if timeout_sec else None
+            poll_interval = 0.1  # Check stop_event every 100ms
 
-            # Parse output
-            if result.returncode == 0:
-                # Use the primary instance DZN (first path) for metadata extraction
-                success, parsed_result = self._parse_solution(result.stdout, dzn_paths[0], solver)
+            while True:
+                # Check for stop request
+                if self.stop_event and self.stop_event.is_set():
+                    logger.info("Stop event detected, terminating process")
+                    self.terminate()
+                    return False, None, None
+
+                # Check if process finished
+                returncode = self.process.poll()
+                if returncode is not None:
+                    break
+
+                # Check timeout
+                if deadline and time.time() > deadline:
+                    self.process.kill()
+                    logger.warning(f"MiniZinc execution timed out with {solver_name}")
+                    return False, None, self.timeout_seconds
+
+                time.sleep(poll_interval)
+
+            # Process finished, read remaining output
+            execution_time = time.time() - start_time
+            stdout, stderr = self.process.communicate()  # Non-blocking at this point
+
+            if returncode == 0:
+                success, parsed_result = self._parse_solution(stdout, dzn_paths[0], solver)
                 if success and parsed_result:
                     parsed_result['execution_time'] = execution_time
                     parsed_result['solver'] = SolverManager.get_display_name(solver)
                 return success, parsed_result, execution_time
             else:
-                logger.warning(f"MiniZinc failed with {solver_name}: {result.stderr[:200]}")
+                logger.warning(f"MiniZinc failed with {solver_name}: {stderr[:200] if stderr else 'Unknown error'}")
                 return False, None, execution_time
 
-        except subprocess.TimeoutExpired:
-            logger.warning(f"MiniZinc execution timed out with {SolverManager.get_minizinc_solver_name(solver)}")
-            return False, None, self.timeout_seconds
         except Exception as e:
             logger.error(f"Execution error: {str(e)}")
+            if self.process and self.process.poll() is None:
+                self.process.kill()
             return False, None, None
+
+    def terminate(self) -> None:
+        """
+        Terminate the currently running MiniZinc process gracefully.
+
+        First attempts SIGTERM, then SIGKILL after 2 seconds if needed.
+        """
+        if self.process is None or self.process.poll() is not None:
+            return
+
+        try:
+            logger.info("Terminating MiniZinc process...")
+            self.process.terminate()
+            try:
+                self.process.wait(timeout=2)
+                logger.info("Process terminated gracefully")
+            except subprocess.TimeoutExpired:
+                logger.warning("Process did not respond to SIGTERM, killing forcefully...")
+                self.process.kill()
+                self.process.wait()
+                logger.info("Process killed")
+        except Exception as e:
+            logger.error(f"Error terminating process: {str(e)}")
 
     def _parse_solution(self, output: str, dzn_path: Path, solver: SolverType) -> Tuple[bool, Optional[Dict]]:
         """
@@ -171,7 +213,6 @@ class MiniZincExecutor:
         """
         result = {}
 
-        # Extract num_buses and num_stations from DZN file
         try:
             with open(dzn_path, 'r', encoding='utf-8') as f:
                 content = f.read()
@@ -186,18 +227,16 @@ class MiniZincExecutor:
         except Exception:
             return None
 
-        # Extract from solution output (MiniZinc outputs in Spanish)
         solution_text = "\n".join(lines)
 
-        # Look for "Estaciones instaladas: [...]" (Spanish for charging locations)
         estaciones_match = re.search(r'Estaciones instaladas:\s*\[(.*?)\]', solution_text, re.DOTALL)
         if estaciones_match:
             locations_str = estaciones_match.group(1)
             try:
-                # Parse the array
                 charging_locs = [int(x.strip()) for x in locations_str.split(',') if x.strip()]
                 result['charging_locations'] = charging_locs
                 result['charged_stations'] = sum(charging_locs)
+                result['charged_index'] = [i for i, val in enumerate(charging_locs) if val == 1]
             except ValueError:
                 logger.warning(f"Failed to parse charging locations: {locations_str}")
                 return None
@@ -205,7 +244,6 @@ class MiniZincExecutor:
             logger.warning("Could not find 'Estaciones instaladas' in output")
             return None
 
-        # Look for "Desviacion total: N" (Spanish for time deviation)
         desviacion_match = re.search(r'Desviacion total:\s*(-?\d+(?:\.\d+)?)', solution_text)
         if desviacion_match:
             result['time_deviation'] = float(desviacion_match.group(1))

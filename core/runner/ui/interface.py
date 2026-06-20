@@ -68,7 +68,14 @@ class RunnerInterface(tk.Frame):
         self.executor: Optional[MiniZincExecutor] = None
         self.result_handler: Optional[ResultHandler] = None
         self.execution_thread: Optional[threading.Thread] = None
+        self.stop_event = threading.Event()
         self.is_running = False
+
+        # Batch execution tracking
+        self.batch_mode: Optional[str] = None
+        self.batch_instances: list = []
+        self.batch_current_index: int = 0
+        self.batch_results: Dict[str, Dict] = {}
 
         # Find project root for file operations
         self.project_root = ProjectPaths.get_project_root()
@@ -143,7 +150,7 @@ class RunnerInterface(tk.Frame):
 
         # Left side: Back button + Title with accent bar
         left = tk.Frame(header, bg=self.theme_dict["bg_surface"])
-        left.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=20, pady=15)
+        left.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=20, pady=10)
 
         # Back button
         back_btn = tk.Label(
@@ -173,7 +180,7 @@ class RunnerInterface(tk.Frame):
 
         # Right side: Status and theme toggle
         right = tk.Frame(header, bg=self.theme_dict["bg_surface"])
-        right.pack(side=tk.RIGHT, fill=tk.Y, padx=20, pady=10)
+        right.pack(side=tk.RIGHT, fill=tk.Y, padx=20, pady=0)
 
         # StatusIndicator (modular component)
         self.status_indicator = StatusIndicator(right, "Ready", self.theme_dict)
@@ -222,7 +229,7 @@ class RunnerInterface(tk.Frame):
             relief=tk.FLAT,
             bd=0,
         )
-        card.pack(fill=tk.BOTH, expand=True, padx=0, pady=12)
+        card.pack(fill=tk.BOTH, expand=True, padx=0, pady=4)
 
         # Directory selection
         SectionLabel(card, "Directory", self.theme_dict).pack(anchor="w", padx=12, pady=(14, 6))
@@ -237,12 +244,56 @@ class RunnerInterface(tk.Frame):
         )
         if dirs:
             self.dir_combo.current(0)
-        self.dir_combo.pack(fill=tk.X, padx=12, pady=(0, 5))
+        self.dir_combo.pack(fill=tk.X, padx=12, pady=(0, 0))
+        self.dir_combo.bind("<<ComboboxSelected>>", lambda _: self._update_subdirectories())
         Tooltip(self.dir_combo, "Select test dataset directory", self.theme_dict)
 
-        Divider(card, self.theme_dict).pack(fill=tk.X, padx=5, pady=5)
+        Divider(card, self.theme_dict).pack(fill=tk.X, padx=5, pady=0)
 
-        # Test instance selection
+        # Subdirectory selection (for nested battery structures)
+        SectionLabel(card, "Subdirectory", self.theme_dict).pack(anchor="w", padx=12, pady=(0, 6))
+        self.subdir_var = tk.StringVar(value="Root")
+        self.subdir_combo = ttk.Combobox(
+            card,
+            textvariable=self.subdir_var,
+            values=["Root"],
+            state="readonly",
+            style="Dark.TCombobox",
+        )
+        self.subdir_combo.current(0)
+        self.subdir_combo.pack(fill=tk.X, padx=12, pady=(0, 0))
+        self.subdir_combo.bind("<<ComboboxSelected>>", lambda _: self._refresh_instances())
+        Tooltip(self.subdir_combo, "Select subdirectory within battery (if available)", self.theme_dict)
+
+        Divider(card, self.theme_dict).pack(fill=tk.X, padx=5, pady=3)
+
+        # Execution mode selection
+        SectionLabel(card, "Execution Mode", self.theme_dict).pack(anchor="w", padx=12, pady=(6, 6))
+        mode_frame = tk.Frame(card, bg=self.theme_dict["bg_elevated"])
+        mode_frame.pack(fill=tk.X, padx=12, pady=(0, 5))
+
+        self.execution_mode = tk.StringVar(value="single")
+        for label, value in [("1 Instance", "single"), ("All", "all"), ("Continue", "continue")]:
+            rb = tk.Radiobutton(
+                mode_frame,
+                text=label,
+                variable=self.execution_mode,
+                value=value,
+                command=lambda v=value: self._on_execution_mode_change(v),
+                bg=self.theme_dict["bg_elevated"],
+                fg=self.theme_dict["text_primary"],
+                selectcolor=self.theme_dict["accent_primary"],
+                activebackground=self.theme_dict["bg_hover"],
+            )
+            rb.pack(side=tk.LEFT, padx=8)
+
+        Tooltip(
+            mode_frame,
+            "1 Instance: Run one. All: Run all sequentially. Continue: Resume from selected index.",
+            self.theme_dict,
+        )
+
+        Divider(card, self.theme_dict).pack(fill=tk.X, padx=5, pady=3)
         SectionLabel(card, "Instance", self.theme_dict).pack(anchor="w", padx=12, pady=(0, 6))
         inst_frame = tk.Frame(card, bg=self.theme_dict["bg_elevated"])
         inst_frame.pack(fill=tk.X, padx=12, pady=(0, 5))
@@ -263,7 +314,7 @@ class RunnerInterface(tk.Frame):
         refresh_btn.pack(side=tk.LEFT, padx=(6, 0))
         Tooltip(refresh_btn, "Reload list of available instances", self.theme_dict)
 
-        Divider(card, self.theme_dict).pack(fill=tk.X, padx=12, pady=5)
+        Divider(card, self.theme_dict).pack(fill=tk.X, padx=12, pady=0)
 
         # Solver selection
         SectionLabel(card, "Solver", self.theme_dict).pack(anchor="w", padx=12, pady=(0, 6))
@@ -298,7 +349,7 @@ class RunnerInterface(tk.Frame):
         info_btn.bind("<Button-1>", self._show_solver_info)
         Tooltip(info_btn, "Show solver information and capabilities", self.theme_dict)
 
-        Divider(card, self.theme_dict).pack(fill=tk.X, padx=12, pady=12)
+        Divider(card, self.theme_dict).pack(fill=tk.X, padx=12, pady=3)
         self.model_var = tk.StringVar(value="CLP")
 
         model_frame = tk.Frame(card, bg=self.theme_dict["bg_elevated"])
@@ -317,7 +368,7 @@ class RunnerInterface(tk.Frame):
             )
             rb.pack(side=tk.LEFT, padx=8)
 
-        Divider(card, self.theme_dict).pack(fill=tk.X, padx=12, pady=5)
+        Divider(card, self.theme_dict).pack(fill=tk.X, padx=12, pady=3)
 
         SectionLabel(card, "Number Type", self.theme_dict).pack(anchor="w", padx=12, pady=(0, 6))
         precision_frame = tk.Frame(card, bg=self.theme_dict["bg_elevated"])
@@ -343,21 +394,21 @@ class RunnerInterface(tk.Frame):
             self.theme_dict,
         )
 
-        Divider(card, self.theme_dict).pack(fill=tk.X, padx=12, pady=5)
+        Divider(card, self.theme_dict).pack(fill=tk.X, padx=12, pady=3)
 
         # Action buttons
         btn_frame = tk.Frame(card, bg=self.theme_dict["bg_elevated"])
-        btn_frame.pack(fill=tk.X, padx=12, pady=(0, 12))
+        btn_frame.pack(fill=tk.X, padx=12, pady=(12, 12))
 
         self.run_btn = FlatButton(
             btn_frame,
-            "Run Test",
+            "Run",
             command=self._start_execution,
             theme=self.theme_dict,
             accent=True,
         )
         self.run_btn.pack(fill=tk.X, pady=(0, 8))
-        Tooltip(self.run_btn, "Execute test with selected instance and solver", self.theme_dict)
+        Tooltip(self.run_btn, "Execute test(s) based on selected mode", self.theme_dict)
 
         self.stop_btn = FlatButton(
             btn_frame,
@@ -404,7 +455,7 @@ class RunnerInterface(tk.Frame):
 
         # Log display
         wrap = tk.Frame(right_panel, bg=self.theme_dict["bg_base"])
-        wrap.pack(fill=tk.BOTH, expand=True, padx=12, pady=12)
+        wrap.pack(fill=tk.BOTH, expand=True, padx=12, pady=3)
 
         self.log_text = tk.Text(
             wrap,
@@ -513,19 +564,24 @@ class RunnerInterface(tk.Frame):
         self._apply_ttk_theme()
     
     def _refresh_instances(self) -> None:
-        """Refresh the list of available test instances."""
+        """Refresh the list of available test instances from selected battery and subdirectory."""
         directory = self.dir_var.get()
         if not directory:
             return
 
+        subdir = self.subdir_var.get()
         data_path = Path(self.project_root) / "experiments" / "instances" / directory
+
+        if subdir and subdir != "Root":
+            data_path = data_path / subdir
+
         instances = sorted([f.stem for f in data_path.glob("*.dzn")]) if data_path.exists() else []
 
         self.instance_combo["values"] = instances
         if instances:
             self.instance_combo.current(0)
 
-        self._log(f"Found {len(instances)} instances in {directory}", "info")
+        self._log(f"Found {len(instances)} instances in {directory}/{subdir if subdir != 'Root' else ''}", "info")
 
     def _load_available_batteries(self) -> list:
         """Load available battery directories from experiments/instances."""
@@ -544,6 +600,56 @@ class RunnerInterface(tk.Frame):
 
         return batteries
 
+    def _get_battery_subdirectories(self, battery_name: str) -> list:
+        """Return list of subdirectories in battery, or empty if none."""
+        battery_path = Path(self.project_root) / "experiments" / "instances" / battery_name
+        if not battery_path.exists():
+            return []
+
+        subdirs = sorted([
+            d.name for d in battery_path.iterdir()
+            if d.is_dir() and not d.name.startswith('.')
+        ])
+
+        return subdirs
+
+    def _update_subdirectories(self) -> None:
+        """Update subdirectory dropdown when battery selection changes."""
+        battery_name = self.dir_var.get()
+        if not battery_name:
+            self.subdir_combo["values"] = ["Root"]
+            self.subdir_var.set("Root")
+            return
+
+        subdirs = self._get_battery_subdirectories(battery_name)
+        if subdirs:
+            self.subdir_combo["values"] = ["Root"] + subdirs
+        else:
+            self.subdir_combo["values"] = ["Root"]
+
+        self.subdir_var.set("Root")
+        self.subdir_combo.current(0)
+        self._refresh_instances()
+
+    def _on_execution_mode_change(self, mode: str) -> None:
+        """Handle execution mode button changes and update UI state."""
+        self.execution_mode.set(mode)
+
+        # Update button appearances
+        for btn_mode, btn in self.mode_buttons.items():
+            btn.config(relief=tk.SUNKEN if btn_mode == mode else tk.FLAT)
+
+        # Update instance combobox enabled state
+        if mode == "single":
+            self.instance_combo.config(state="readonly")
+            self.instance_combo.pack_info()  # Show if hidden
+        elif mode == "all":
+            self.instance_combo.config(state="disabled")
+            self.instance_combo.pack_info()  # Show but disabled
+        elif mode == "continue":
+            self.instance_combo.config(state="readonly")
+            self.instance_combo.pack_info()  # Show and enabled
+
     def _log(self, message: str, tag: str = "muted") -> None:
         """Add a message to the output log."""
         self.log_text.insert(tk.END, message + "\n", tag)
@@ -554,12 +660,14 @@ class RunnerInterface(tk.Frame):
         self.log_text.delete("1.0", tk.END)
 
     def _start_execution(self) -> None:
-        """Start execution of the selected test instance."""
+        """Start execution based on selected mode (single, all, or continue)."""
         instance = self.instance_var.get()
         model = self.model_var.get()
         precision = self.precision_var.get()
         directory = self.dir_var.get()
+        subdir = self.subdir_var.get()
         solver_name = self.solver_var.get()
+        mode = self.execution_mode.get()
 
         if not instance or not model or not precision or not directory:
             messagebox.showwarning("Missing Selection", "Please select directory, instance, model, and number type.")
@@ -575,22 +683,85 @@ class RunnerInterface(tk.Frame):
             )
             return
 
-        self._log(f"Starting execution: {instance} ({model}, {precision}) with {solver_name}", "info")
+        subdir_str = f" ({subdir})" if subdir and subdir != "Root" else ""
         self.status_indicator.set_status("running", "Running...")
         self.run_btn.set_disabled(True)
         self.stop_btn.set_disabled(False)
         self.is_running = True
 
-        self.execution_thread = threading.Thread(
-            target=self._execute_test,
-            args=(directory, instance, model, precision, solver_name),
-            daemon=True
-        )
-        self.execution_thread.start()
+        if mode == "single":
+            self._log(f"Starting execution: {instance} ({model}, {precision}) with {solver_name}{subdir_str}", "info")
+            self.execution_thread = threading.Thread(
+                target=self._execute_test,
+                args=(directory, instance, model, precision, solver_name, subdir if subdir != "Root" else None),
+                daemon=True
+            )
+            self.execution_thread.start()
 
-    def _execute_test(self, directory: str, instance: str, model: str, precision: str, solver_name: str) -> None:
-        """Execute test in background thread."""
+        elif mode == "all":
+            # Load all instances for batch execution
+            data_path = Path(self.project_root) / "experiments" / "instances" / directory
+            if subdir and subdir != "Root":
+                data_path = data_path / subdir
+
+            instances = sorted([f.stem for f in data_path.glob("*.dzn")]) if data_path.exists() else []
+            if not instances:
+                messagebox.showwarning("No Instances", f"No instances found in {directory}{subdir_str}")
+                self.is_running = False
+                self.run_btn.set_disabled(False)
+                self.stop_btn.set_disabled(True)
+                return
+
+            self._log(f"Starting batch execution: {len(instances)} instances in {directory}{subdir_str}", "info")
+            self.batch_instances = instances
+            self.batch_current_index = 0
+            self.batch_results = {}
+
+            self.execution_thread = threading.Thread(
+                target=self._execute_batch,
+                args=(directory, instances, 0, model, precision, solver_name, subdir if subdir != "Root" else None),
+                daemon=True
+            )
+            self.execution_thread.start()
+
+        elif mode == "continue":
+            data_path = Path(self.project_root) / "experiments" / "instances" / directory
+            if subdir and subdir != "Root":
+                data_path = data_path / subdir
+
+            instances = sorted([f.stem for f in data_path.glob("*.dzn")]) if data_path.exists() else []
+            if not instances:
+                messagebox.showwarning("No Instances", f"No instances found in {directory}{subdir_str}")
+                self.is_running = False
+                self.run_btn.set_disabled(False)
+                self.stop_btn.set_disabled(True)
+                return
+
+            # Show dialog to select starting instance
+            start_index = self._show_continue_dialog(instances)
+            if start_index is None:
+                self.is_running = False
+                self.run_btn.set_disabled(False)
+                self.stop_btn.set_disabled(True)
+                return
+
+            self._log(f"Resuming batch execution from instance {start_index + 1}/{len(instances)}: {instances[start_index]}", "info")
+            self.batch_instances = instances
+            self.batch_current_index = start_index
+            self.batch_results = {}
+
+            self.execution_thread = threading.Thread(
+                target=self._execute_batch,
+                args=(directory, instances, start_index, model, precision, solver_name, subdir if subdir != "Root" else None),
+                daemon=True
+            )
+            self.execution_thread.start()
+
+    def _execute_test(self, directory: str, instance: str, model: str, precision: str, solver_name: str, subdirectory: Optional[str] = None) -> None:
+        """Execute test in background thread with proper stop signal handling."""
         try:
+            self.stop_event.clear()
+
             # Get solver type from display name
             solver_type = SolverManager.get_solver_by_display_name(solver_name)
             if not solver_type:
@@ -609,10 +780,13 @@ class RunnerInterface(tk.Frame):
                 return
 
             # Run without a hard execution time limit from the UI.
-            executor = MiniZincExecutor(str(model_path), timeout_seconds=None)
+            self.executor = MiniZincExecutor(str(model_path), timeout_seconds=None, stop_event=self.stop_event)
 
             data_path = Path(self.project_root) / "experiments" / "instances" / directory
-            instance_path = data_path / f"{instance}.dzn"
+            if subdirectory:
+                instance_path = data_path / subdirectory / f"{instance}.dzn"
+            else:
+                instance_path = data_path / f"{instance}.dzn"
 
             if not instance_path.exists():
                 self._log(f"Instance not found: {instance_path}", "error")
@@ -622,7 +796,13 @@ class RunnerInterface(tk.Frame):
             self._log(f"Executing: {model} [{precision}] ({solver_name}) on {instance}", "key")
 
             # execute() now returns tuple: (success: bool, result: Optional[Dict], execution_time: Optional[float])
-            success, result_dict, exec_time = executor.execute(str(instance_path), solver_type)
+            success, result_dict, exec_time = self.executor.execute(str(instance_path), solver_type)
+
+            # Check if stop was requested during execution
+            if self.stop_event.is_set():
+                self._log("Execution stopped by user", "warning")
+                self.status_indicator.set_status("idle", "Ready")
+                return
 
             if success and result_dict:
                 self._log(f"Execution completed successfully in {exec_time:.3f}s", "success")
@@ -630,9 +810,15 @@ class RunnerInterface(tk.Frame):
 
                 # Save results organized by test name and solver
                 test_name = instance.replace('.dzn', '')
+
+                # Build output directory - model_type comes BEFORE subdirectory
+                output_base = Path(self.project_root) / "experiments" / "results" / "output" / directory
+
                 handler = ResultHandler(
-                    str(Path(self.project_root) / "experiments" / "results" / "output" / directory),
-                    test_name=test_name
+                    str(output_base),
+                    test_name=test_name,
+                    model_type=precision,
+                    subdirectory_path=subdirectory
                 )
                 success_save, json_path, txt_path = handler.save_results(instance, result_dict, SolverManager.get_display_name(solver_type))
 
@@ -664,15 +850,219 @@ class RunnerInterface(tk.Frame):
             self.run_btn.set_disabled(False)
             self.stop_btn.set_disabled(True)
             self.status_indicator.set_status("idle", "Ready")
+            self.executor = None
 
     def _stop_execution(self) -> None:
-        """Stop the currently running test execution."""
-        if self.is_running:
-            self._log("Execution stopped by user", "warning")
+        """Stop the currently running test execution by terminating subprocess."""
+        if not self.is_running:
+            return
+
+        self._log("Stopping execution...", "warning")
+        self.stop_event.set()
+
+        if self.executor:
+            self.executor.terminate()
+
+        self.is_running = False
+        self.run_btn.set_disabled(False)
+        self.stop_btn.set_disabled(True)
+        self.status_indicator.set_status("idle", "Ready")
+
+    def _execute_batch(self, directory: str, instances: list, start_index: int, model: str, precision: str, solver_name: str, subdirectory: Optional[str] = None) -> None:
+        """Execute multiple instances sequentially with proper error handling and stop signals."""
+        try:
+            self.stop_event.clear()
+            total_instances = len(instances)
+
+            for i in range(start_index, total_instances):
+                if self.stop_event.is_set():
+                    self._log(f"Batch execution stopped by user at instance {i}/{total_instances}", "warning")
+                    break
+
+                instance = instances[i]
+                self.batch_current_index = i
+
+                self._log(f"[{i+1}/{total_instances}] Executing {instance}...", "info")
+
+                # Re-execute single instance in-thread
+                solver_type = SolverManager.get_solver_by_display_name(solver_name)
+                if not solver_type:
+                    self._log(f"Invalid solver: {solver_name}", "error")
+                    continue
+
+                if model == "RCLP":
+                    model_path = ProjectPaths.rclp_model_path(precision)
+                else:
+                    model_path = ProjectPaths.clp_model_path(precision)
+
+                if not model_path.exists():
+                    self._log(f"Model not found: {model_path}", "error")
+                    continue
+
+                self.executor = MiniZincExecutor(str(model_path), timeout_seconds=None)
+
+                data_path = Path(self.project_root) / "experiments" / "instances" / directory
+                if subdirectory:
+                    instance_path = data_path / subdirectory / f"{instance}.dzn"
+                else:
+                    instance_path = data_path / f"{instance}.dzn"
+
+                if not instance_path.exists():
+                    self._log(f"Instance not found: {instance_path}", "error")
+                    self._save_batch_diagnostic(instance, f"Instance file not found", solver_name, precision, directory, subdirectory)
+                    continue
+
+                success, result_dict, exec_time = self.executor.execute(str(instance_path), solver_type)
+
+                if self.stop_event.is_set():
+                    self._log(f"Batch execution stopped by user during instance {i}", "warning")
+                    break
+
+                if success and result_dict:
+                    self._log(f"✓ {instance} completed in {exec_time:.3f}s", "success")
+                    self.batch_results[instance] = result_dict
+
+                    # Save results
+                    test_name = instance.replace('.dzn', '')
+                    output_base = Path(self.project_root) / "experiments" / "results" / "output" / directory
+
+                    handler = ResultHandler(
+                        str(output_base),
+                        test_name=test_name,
+                        model_type=precision,
+                        subdirectory_path=subdirectory
+                    )
+                    handler.save_results(instance, result_dict, SolverManager.get_display_name(solver_type))
+
+                elif result_dict and result_dict.get('status') == 'unsatisfiable':
+                    self._log(f"⚠ {instance} is UNSATISFIABLE", "warning")
+                    self.batch_results[instance] = result_dict
+
+                    # Save diagnostic for UNSAT
+                    diag_result = {
+                        'test_instance': str(instance_path),
+                        'model': str(model_path),
+                        'error_message': "Instance is unsatisfiable",
+                        'minizinc_stderr': '',
+                        'execution_time': exec_time
+                    }
+                    handler = ResultHandler(str(Path(self.project_root) / "experiments" / "results"))
+                    handler.save_diagnostic(instance, diag_result, SolverManager.get_display_name(solver_type), "unsatisfiable")
+
+                else:
+                    self._log(f"✗ {instance} FAILED", "error")
+                    self._save_batch_diagnostic(instance, f"Execution failed with {solver_name}", solver_name, precision, directory, subdirectory)
+                    self._log(f"Batch execution stopped at instance {i+1}/{total_instances}", "error")
+                    break
+
+            # Batch complete
+            completed = i + 1 - start_index
+            if self.stop_event.is_set():
+                self._log(f"Batch interrupted: {completed}/{total_instances - start_index} instances executed", "warning")
+            else:
+                self._log(f"Batch execution complete: {completed}/{total_instances - start_index} instances executed", "success")
+                self.status_indicator.set_status("success", "Batch Complete")
+
+        except Exception as e:
+            self._log(f"Exception during batch execution: {e}", "error")
+            self.status_indicator.set_status("error", "Error")
+        finally:
             self.is_running = False
             self.run_btn.set_disabled(False)
             self.stop_btn.set_disabled(True)
-            self.status_indicator.set_status("idle", "Ready")
+            if not self.stop_event.is_set():
+                self.status_indicator.set_status("idle", "Ready")
+            self.executor = None
+
+    def _show_continue_dialog(self, instances: list) -> Optional[int]:
+        """Show dialog to select starting instance for batch resume."""
+        dialog = tk.Toplevel(self.root)
+        dialog.title("Continue Batch Execution")
+        dialog.geometry("400x300")
+        dialog.resizable(False, False)
+        dialog.transient(self.root)
+        dialog.grab_set()
+
+        dialog.update_idletasks()
+        x = self.root.winfo_x() + (self.root.winfo_width() // 2) - 200
+        y = self.root.winfo_y() + (self.root.winfo_height() // 2) - 150
+        dialog.geometry(f"+{x}+{y}")
+
+        dialog.configure(bg=self.theme_dict["bg_base"])
+
+        tk.Label(
+            dialog,
+            text="Select starting instance:",
+            font=self.theme_dict["font_ui"],
+            fg=self.theme_dict["text_primary"],
+            bg=self.theme_dict["bg_base"],
+        ).pack(anchor="w", padx=15, pady=(15, 10))
+
+        # Listbox with scrollbar
+        frame = tk.Frame(dialog, bg=self.theme_dict["bg_base"])
+        frame.pack(fill=tk.BOTH, expand=True, padx=15, pady=(0, 0))
+
+        scrollbar = ttk.Scrollbar(frame, orient=tk.VERTICAL)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+        listbox = tk.Listbox(
+            frame,
+            bg=self.theme_dict["bg_elevated"],
+            fg=self.theme_dict["text_primary"],
+            font=self.theme_dict["font_mono"],
+            yscrollcommand=scrollbar.set
+        )
+        listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.config(command=listbox.yview)
+
+        for idx, inst in enumerate(instances):
+            listbox.insert(tk.END, f"{idx+1:2d}. {inst}")
+
+        listbox.selection_set(0)
+        listbox.see(0)
+
+        selected_index = [-1]
+
+        def on_ok():
+            if listbox.curselection():
+                selected_index[0] = listbox.curselection()[0]
+            dialog.destroy()
+
+        def on_cancel():
+            selected_index[0] = -1
+            dialog.destroy()
+
+        btn_frame = tk.Frame(dialog, bg=self.theme_dict["bg_base"])
+        btn_frame.pack(fill=tk.X, padx=15, pady=(0, 0))
+
+        ok_btn = FlatButton(btn_frame, "Continue", command=on_ok, theme=self.theme_dict, accent=True)
+        ok_btn.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 8))
+
+        cancel_btn = FlatButton(btn_frame, "Cancel", command=on_cancel, theme=self.theme_dict, accent=False)
+        cancel_btn.pack(side=tk.LEFT, fill=tk.X, expand=True)
+
+        self.root.wait_window(dialog)
+
+        return selected_index[0] if selected_index[0] >= 0 else None
+
+    def _save_batch_diagnostic(self, instance: str, error_msg: str, solver_name: str, precision: str, directory: str, subdirectory: Optional[str] = None) -> None:
+        """Save diagnostic information for failed batch instance."""
+        try:
+            solver_type = SolverManager.get_solver_by_display_name(solver_name)
+            if not solver_type:
+                return
+
+            diag_result = {
+                'test_instance': instance,
+                'model': 'Unknown',
+                'error_message': error_msg,
+                'minizinc_stderr': '',
+                'execution_time': None
+            }
+            handler = ResultHandler(str(Path(self.project_root) / "experiments" / "results"))
+            handler.save_diagnostic(instance, diag_result, SolverManager.get_display_name(solver_type), "batch_error")
+        except Exception as e:
+            logger.error(f"Failed to save batch diagnostic: {e}")
 
     def _show_solver_info(self, event=None) -> None:
         """Display solver information in modal dialog."""
@@ -709,7 +1099,7 @@ class RunnerInterface(tk.Frame):
 
         # Title and close button
         title_frame = tk.Frame(header, bg=self.theme_dict["bg_surface"])
-        title_frame.pack(fill=tk.BOTH, expand=True, padx=15, pady=10)
+        title_frame.pack(fill=tk.BOTH, expand=True, padx=15, pady=0)
 
         tk.Label(
             title_frame,
@@ -732,7 +1122,7 @@ class RunnerInterface(tk.Frame):
 
         # Content scrollable area
         content_frame = tk.Frame(dialog, bg=self.theme_dict["bg_base"])
-        content_frame.pack(fill=tk.BOTH, expand=True, padx=15, pady=15)
+        content_frame.pack(fill=tk.BOTH, expand=True, padx=15, pady=0)
 
         # Description
         tk.Label(
@@ -752,11 +1142,11 @@ class RunnerInterface(tk.Frame):
             relief=tk.FLAT,
             bd=0,
             padx=10,
-            pady=5,
+            pady=0,
         )
         desc_text.insert(tk.END, solver_info.description)
         desc_text.configure(state="disabled")
-        desc_text.pack(fill=tk.X, pady=(0, 12))
+        desc_text.pack(fill=tk.X, pady=(0, 0))
 
         # Strengths
         tk.Label(
@@ -776,11 +1166,11 @@ class RunnerInterface(tk.Frame):
             relief=tk.FLAT,
             bd=0,
             padx=10,
-            pady=5,
+            pady=0,
         )
         strengths_text.insert(tk.END, "• " + "\n• ".join(solver_info.strengths))
         strengths_text.configure(state="disabled")
-        strengths_text.pack(fill=tk.X, pady=(0, 12))
+        strengths_text.pack(fill=tk.X, pady=(0, 0))
 
         # Use cases
         tk.Label(
@@ -800,11 +1190,11 @@ class RunnerInterface(tk.Frame):
             relief=tk.FLAT,
             bd=0,
             padx=10,
-            pady=5,
+            pady=0,
         )
         use_text.insert(tk.END, "• " + "\n• ".join(solver_info.use_cases))
         use_text.configure(state="disabled")
-        use_text.pack(fill=tk.X, pady=(0, 12))
+        use_text.pack(fill=tk.X, pady=(0, 0))
 
         # Commercial badge
         if solver_info.commercial:
@@ -818,7 +1208,7 @@ class RunnerInterface(tk.Frame):
                 fg=self.theme_dict["warning"],
                 bg=self.theme_dict["bg_elevated"],
                 padx=8,
-                pady=4,
+                pady=0,
                 relief=tk.FLAT,
                 bd=0,
             ).pack(side=tk.LEFT)

@@ -11,7 +11,7 @@ class SectionLabel(tk.Frame):
         super().__init__(parent, **kwargs)
         self.configure(bg=theme["bg_base"], highlightthickness=0)
         accent_bar = tk.Frame(self, bg=theme["accent_primary"], width=4, height=24)
-        accent_bar.pack(side=tk.LEFT, padx=(0, 12), pady=4)
+        accent_bar.pack(side=tk.LEFT, padx=(0, 12), pady=0)
         accent_bar.pack_propagate(False)
         label = tk.Label(self, text=text.upper(), font=theme["font_section"], 
                         fg=theme["text_secondary"], bg=theme["bg_base"], anchor=tk.W)
@@ -50,7 +50,7 @@ class FlatButton(tk.Frame):
             self, text=text, font=theme["font_bold"],
             fg=self._normal_fg if not disabled else self._disabled_fg,
             bg=self._normal_bg if not disabled else self._disabled_bg,
-            padx=16, pady=10, cursor="hand2" if not disabled else "arrow", anchor=tk.CENTER
+            padx=16, pady=0, cursor="hand2" if not disabled else "arrow", anchor=tk.CENTER
         )
         self.btn.pack(fill=tk.BOTH, expand=True)
 

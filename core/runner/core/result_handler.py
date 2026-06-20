@@ -2,7 +2,8 @@
 Result Handler - Save test results in JSON and TXT formats
 
 Manages output file generation and formatting for successful and failed executions.
-Organizes results by solver and stores diagnostics for failed runs.
+Organizes results by model type (float/integer), test name, and solver.
+Stores diagnostics for failed runs with proper hierarchical structure.
 
 Authors: Andrey Quiceno and Juan Francesco García (AVISPA Team)
 """
@@ -17,23 +18,31 @@ logger = logging.getLogger(__name__)
 
 
 class ResultHandler:
-    """Handle result file generation and storage with test-name and solver organization."""
+    """Handle result file generation and storage with model type, test-name and solver organization."""
 
-    def __init__(self, output_dir: str, test_name: str = ""):
+    def __init__(self, output_dir: str, test_name: str = "", model_type: Optional[str] = None, subdirectory_path: Optional[str] = None):
         """
         Initialize result handler.
 
         Args:
             output_dir: Base directory to save results
             test_name: Name of the test instance (optional, for organizing by test)
+            model_type: Model type ("float" or "integer"), optional for backward compatibility
+            subdirectory_path: Optional subdirectory within battery (e.g., "cork-1-line")
         """
         self.output_dir = Path(output_dir)
         self.test_name = test_name
+        self.model_type = model_type
+        self.subdirectory_path = subdirectory_path
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
     def save_results(self, filename: str, result: Dict, solver: str) -> Tuple[bool, str, str]:
         """
-        Save successful results in JSON and TXT formats, organized by test name and solver.
+        Save successful results in JSON and TXT formats, organized by model type, subdirectory, test name, and solver.
+
+        Structure with model_type and subdirectory: output_dir/float_or_integer/subdir/test_name/solver/
+        Structure with model_type only: output_dir/float_or_integer/test_name/solver/
+        Structure without model_type: output_dir/test_name/solver/ (backward compatible)
 
         Args:
             filename: Base filename (without extension)
@@ -44,12 +53,18 @@ class ResultHandler:
             (success: bool, json_path: str, txt_path: str)
         """
         try:
-            # Build directory path: output_dir/test_name/solver (if test_name provided)
-            if self.test_name:
-                result_dir = self.output_dir / self.test_name / solver
-            else:
-                result_dir = self.output_dir / solver
+            result_dir = self.output_dir
 
+            if self.model_type:
+                result_dir = result_dir / self.model_type
+
+            if self.subdirectory_path:
+                result_dir = result_dir / self.subdirectory_path
+
+            if self.test_name:
+                result_dir = result_dir / self.test_name
+
+            result_dir = result_dir / solver
             result_dir.mkdir(parents=True, exist_ok=True)
 
             # Save JSON
@@ -72,6 +87,9 @@ class ResultHandler:
         """
         Save diagnostic information for failed or unsatisfiable runs.
 
+        Structure with model_type: Diagnostics/float_or_integer/solver/
+        Structure without model_type: Diagnostics/solver/ (backward compatible)
+
         Args:
             filename: Base filename (without extension)
             result: Result dictionary with error information
@@ -82,8 +100,11 @@ class ResultHandler:
             (success: bool, json_path: str, txt_path: str)
         """
         try:
-            # Create diagnostics directory structure: Tests/Diagnostics/{solver}/
-            diag_dir = Path("Tests/Diagnostics") / solver
+            if self.model_type:
+                diag_dir = Path("Tests/Diagnostics") / self.model_type / solver
+            else:
+                diag_dir = Path("Tests/Diagnostics") / solver
+
             diag_dir.mkdir(parents=True, exist_ok=True)
 
             # Save JSON diagnostic
@@ -111,6 +132,7 @@ class ResultHandler:
             "num_stations": result.get('num_stations', 0),
             "charged_stations": result.get('charged_stations', 0),
             "charging_locations": result.get('charging_locations', []),
+            "charged_index": result.get('charged_index', []),
             "time_deviation_minutes": deviation_minutes,
             "timestamp": datetime.now().isoformat()
         }
@@ -124,11 +146,12 @@ class ResultHandler:
         num_stations = result.get('num_stations', 0)
         charged = result.get('charged_stations', 0)
         locations = result.get('charging_locations', [])
+        charged_idx = result.get('charged_index', [])
         deviation = self._time_deviation_minutes(result)
         exec_time = result.get('execution_time', 0)
 
-        # Format charging locations as binary array
         locations_str = "[" + ",".join(str(x) for x in locations) + "]"
+        charged_idx_str = "[" + ",".join(str(x) for x in charged_idx) + "]"
 
         lines = [
             "=" * 70,
@@ -143,6 +166,7 @@ class ResultHandler:
             f"Number of Stations:     {num_stations}",
             f"Charged Stations:       {charged}",
             f"Charging Locations:     {locations_str}",
+            f"Charged Index:          {charged_idx_str}",
             f"Time Deviation:         {deviation} minutes",
             "",
             "=" * 70
